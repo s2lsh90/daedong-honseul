@@ -107,24 +107,20 @@ export default function MapClient({ bars, onBarClick, selectedBarId }: Props) {
       });
     };
 
+    // next/script afterInteractive가 로드될 때까지 polling
     if (window.kakao) {
       initMap();
       return;
     }
 
-    // 스크립트 동적 주입
-    const existing = document.querySelector('script[src*="dapi.kakao.com"]');
-    if (existing) {
-      existing.addEventListener('load', initMap);
-      return;
-    }
+    const interval = setInterval(() => {
+      if (window.kakao) {
+        clearInterval(interval);
+        initMap();
+      }
+    }, 200);
 
-    const script = document.createElement('script');
-    script.src =
-      '//dapi.kakao.com/v2/maps/sdk.js?appkey=65f89f3c518bd9cb7689641cf9cfde13&autoload=false';
-    script.async = true;
-    script.onload = initMap;
-    document.head.appendChild(script);
+    return () => clearInterval(interval);
   }, []);
 
   // 오버레이(핀) 업데이트

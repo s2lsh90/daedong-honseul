@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -27,7 +28,13 @@ export default function RootLayout({
       lang="ko"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <Script
+          src="//dapi.kakao.com/v2/maps/sdk.js?appkey=65f89f3c518bd9cb7689641cf9cfde13&autoload=false"
+          strategy="afterInteractive"
+        />
+        {children}
+      </body>
     </html>
   );
 }
