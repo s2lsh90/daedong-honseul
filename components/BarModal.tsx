@@ -109,7 +109,14 @@ export default function BarModal({ bar, onClose, activeCheckin, onCheckin, onChe
   const { user } = useAuth();
   const [tab, setTab] = useState<'status' | 'reviews'>('status');
 
-  const [nickname, setNickname] = useState('');
+  // 로그인 유저면 이름 자동 세팅
+  const userNickname =
+    (user?.user_metadata?.name as string) ||
+    (user?.user_metadata?.full_name as string) ||
+    (user?.user_metadata?.nickname as string) ||
+    user?.email?.split('@')[0] || '';
+
+  const [nickname, setNickname] = useState(userNickname);
   const [gender, setGender] = useState<'male' | 'female' | ''>('');
   const [checkinLoading, setCheckinLoading] = useState(false);
   const [checkinError, setCheckinError] = useState('');
@@ -359,21 +366,32 @@ export default function BarModal({ bar, onClose, activeCheckin, onCheckin, onChe
               ) : (
                 <div className="space-y-2">
                   <p className="text-xs font-bold" style={{ color: C.textMid }}>🍺 이 바에 체크인하기</p>
-                  <input
-                    type="text"
-                    placeholder="닉네임 입력"
-                    value={nickname}
-                    onChange={(e) => setNickname(e.target.value)}
-                    maxLength={10}
-                    className="w-full px-4 py-2.5 text-sm focus:outline-none"
-                    style={{
-                      background: 'rgba(255,248,230,0.8)',
-                      border: `1.5px solid ${C.borderLight}`,
-                      borderRadius: '4px',
-                      color: C.text,
-                      fontFamily: "Georgia, serif",
-                    }}
-                  />
+
+                  {/* 로그인 유저면 이름 뱃지, 비로그인이면 입력 필드 */}
+                  {user ? (
+                    <div className="flex items-center gap-2 px-4 py-2.5"
+                      style={{ background: 'rgba(255,248,230,0.8)', border: `1.5px solid ${C.borderLight}`, borderRadius: '4px' }}>
+                      <span className="text-base">👤</span>
+                      <span className="text-sm font-bold" style={{ color: C.text }}>{userNickname}</span>
+                      <span className="text-xs italic ml-auto" style={{ color: C.textMuted }}>카카오 계정</span>
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
+                      placeholder="닉네임 입력"
+                      value={nickname}
+                      onChange={(e) => setNickname(e.target.value)}
+                      maxLength={10}
+                      className="w-full px-4 py-2.5 text-sm focus:outline-none"
+                      style={{
+                        background: 'rgba(255,248,230,0.8)',
+                        border: `1.5px solid ${C.borderLight}`,
+                        borderRadius: '4px',
+                        color: C.text,
+                        fontFamily: "Georgia, serif",
+                      }}
+                    />
+                  )}
                   <div className="grid grid-cols-2 gap-2">
                     {(['male', 'female'] as const).map((g) => (
                       <button
