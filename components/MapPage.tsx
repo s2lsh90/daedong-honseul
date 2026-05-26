@@ -2,7 +2,9 @@
 
 import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import BarModal from './BarModal';
+import { useAuth } from './AuthContext';
 
 const MapClient = dynamic(() => import('./MapClient'), { ssr: false });
 
@@ -30,6 +32,8 @@ interface ActiveCheckin {
 const STORAGE_KEY = 'honseul_checkin';
 
 export default function MapPage() {
+  const router = useRouter();
+  const { user, loading: authLoading, signOut } = useAuth();
   const [bars, setBars] = useState<BarWithStats[]>([]);
   const [selectedBarId, setSelectedBarId] = useState<string | null>(null);
   const [activeCheckin, setActiveCheckin] = useState<ActiveCheckin | null>(null);
@@ -82,12 +86,39 @@ export default function MapPage() {
           <h1 className="text-xl font-black text-amber-400 tracking-tight">🍺 대동혼술지도</h1>
           <p className="text-xs text-white/40">서울 혼술바 실시간 남녀 현황</p>
         </div>
-        <a
-          href="/owner"
-          className="pointer-events-auto text-xs bg-white/10 hover:bg-white/20 text-white/70 px-3 py-1.5 rounded-full transition-colors"
-        >
-          사장님 등록 →
-        </a>
+        <div className="pointer-events-auto flex items-center gap-2">
+          {!authLoading && (
+            user ? (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-white/50 hidden sm:block">
+                  {(user.user_metadata?.name as string) ||
+                    (user.user_metadata?.full_name as string) ||
+                    (user.user_metadata?.nickname as string) ||
+                    user.email?.split('@')[0]}
+                </span>
+                <button
+                  onClick={signOut}
+                  className="text-xs bg-white/10 hover:bg-white/20 text-white/60 px-3 py-1.5 rounded-full transition-colors"
+                >
+                  로그아웃
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => router.push('/login')}
+                className="text-xs bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/30 px-3 py-1.5 rounded-full transition-colors font-medium"
+              >
+                로그인
+              </button>
+            )
+          )}
+          <a
+            href="/owner"
+            className="text-xs bg-white/10 hover:bg-white/20 text-white/70 px-3 py-1.5 rounded-full transition-colors"
+          >
+            사장님 등록
+          </a>
+        </div>
       </div>
 
       {/* Map */}

@@ -116,9 +116,13 @@ function buildClusterHTML(cluster: Cluster): string {
       min-width: 138px;
       box-shadow: 0 6px 28px rgba(0,0,0,0.7), 0 0 20px ${color}40, 0 0 0 1px rgba(255,255,255,0.05);
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      cursor: default;
+      cursor: pointer;
       user-select: none;
-    ">
+      transition: filter 0.15s ease;
+    "
+    onmouseover="this.style.filter='brightness(1.2)'"
+    onmouseout="this.style.filter='brightness(1)'"
+    >
       <div style="display:flex; align-items:center; gap:5px; margin-bottom:3px;">
         <div style="width:6px; height:6px; border-radius:50%; background:${color}; box-shadow:0 0 6px ${color};"></div>
         <div style="font-size:12.5px; font-weight:800; color:#f0f0f0; letter-spacing:-0.4px; white-space:nowrap;">
@@ -263,7 +267,13 @@ export default function MapClient({ bars, onBarClick, selectedBarId }: Props) {
         const el       = document.createElement('div');
         el.innerHTML   = buildClusterHTML(cluster);
         el.style.position = 'relative';
-        // 클러스터는 클릭 비활성화
+
+        // 클릭 시 해당 위치로 줌인 → 개별 핀 모드로 자동 전환
+        el.onclick = () => {
+          const pos = new window.kakao.maps.LatLng(cluster.lat, cluster.lng);
+          mapRef.current.setCenter(pos);
+          mapRef.current.setLevel(4, { animate: true });
+        };
 
         const overlay = new window.kakao.maps.CustomOverlay({
           position: new window.kakao.maps.LatLng(cluster.lat, cluster.lng),
@@ -308,7 +318,7 @@ export default function MapClient({ bars, onBarClick, selectedBarId }: Props) {
         <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-[400] pointer-events-none">
           <div className="flex items-center gap-2 bg-black/55 backdrop-blur-sm rounded-full px-4 py-2 text-white/60 text-xs whitespace-nowrap">
             <span className="text-base">🔍</span>
-            확대하면 개별 혼술바를 볼 수 있어요
+            클릭하거나 확대하면 개별 혼술바를 볼 수 있어요
           </div>
         </div>
       )}

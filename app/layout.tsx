@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
+import Providers from "./providers";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -33,7 +34,7 @@ export default function RootLayout({
           src="//dapi.kakao.com/v2/maps/sdk.js?appkey=65f89f3c518bd9cb7689641cf9cfde13&autoload=false"
           strategy="afterInteractive"
         />
-        {children}
+        <Providers>{children}</Providers>
       </body>
     </html>
   );
