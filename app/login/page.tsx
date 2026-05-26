@@ -20,7 +20,7 @@ export default function LoginPage() {
     setLoading(true);
     setError('');
     try {
-      await signInWithKakao(); // 카카오 로그인 페이지로 리다이렉트
+      await signInWithKakao();
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : '로그인 중 오류가 발생했습니다');
       setLoading(false);
@@ -28,28 +28,65 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0d0d14] flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-xs text-center space-y-10">
+    <div
+      className="min-h-screen flex flex-col items-center justify-center p-4"
+      style={{ background: '#08081a', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}
+    >
+      {/* 배경 별빛 효과 */}
+      <div
+        className="fixed inset-0 pointer-events-none"
+        style={{
+          background: 'radial-gradient(ellipse at 50% 0%, rgba(79,195,247,0.06) 0%, transparent 70%)',
+        }}
+      />
+
+      <div className="w-full max-w-xs text-center space-y-10 relative z-10">
 
         {/* 로고 */}
-        <div className="space-y-2">
-          <div className="text-6xl">🍺</div>
-          <h1 className="text-2xl font-black text-amber-400 tracking-tight">대동혼술지도</h1>
-          <p className="text-white/35 text-sm">서울 혼술바 실시간 남녀 현황</p>
+        <div className="space-y-3">
+          <div className="text-6xl" style={{ filter: 'drop-shadow(0 0 20px rgba(79,195,247,0.4))' }}>🍺</div>
+          <h1
+            className="text-2xl font-black tracking-tight"
+            style={{ color: '#fff' }}
+          >
+            <span style={{ color: '#4fc3f7' }}>대동</span>혼술지도
+          </h1>
+          <p className="text-sm" style={{ color: 'rgba(255,255,255,0.35)' }}>
+            서울 혼술바 실시간 남녀 현황
+          </p>
         </div>
 
         {/* 로그인 카드 */}
-        <div className="bg-[#1a1a2e] border border-white/10 rounded-2xl p-6 space-y-4 shadow-2xl">
+        <div
+          className="rounded-2xl p-6 space-y-5"
+          style={{
+            background: 'rgba(10,10,28,0.92)',
+            border: '1px solid rgba(79,195,247,0.15)',
+            boxShadow: '0 0 40px rgba(79,195,247,0.06), 0 20px 60px rgba(0,0,0,0.5)',
+            backdropFilter: 'blur(20px)',
+          }}
+        >
+          {/* 상단 액센트 라인 */}
+          <div
+            className="h-px -mx-6 -mt-6 mb-5"
+            style={{ background: 'linear-gradient(90deg, transparent, rgba(79,195,247,0.5), transparent)' }}
+          />
+
           <div className="space-y-1">
-            <p className="text-white/80 text-sm font-semibold">로그인</p>
-            <p className="text-white/35 text-xs">로그인하면 방문한 혼술바에 리뷰를 남길 수 있어요</p>
+            <p className="text-sm font-semibold" style={{ color: 'rgba(255,255,255,0.85)' }}>로그인</p>
+            <p className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>
+              로그인하면 방문한 혼술바에 리뷰를 남길 수 있어요
+            </p>
           </div>
 
           <button
             onClick={handleKakaoLogin}
             disabled={loading}
             className="w-full flex items-center justify-center gap-3 py-3.5 px-5 rounded-xl font-bold text-[#191919] text-sm transition-all hover:brightness-95 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
-            style={{ background: '#FEE500' }}
+            style={{
+              background: '#FEE500',
+              boxShadow: '0 4px 20px rgba(254,229,0,0.25)',
+            }}
           >
             {loading ? (
               <span className="animate-spin text-lg">⏳</span>
@@ -60,13 +97,16 @@ export default function LoginPage() {
           </button>
 
           {error && (
-            <p className="text-red-400 text-xs text-center">{error}</p>
+            <p className="text-xs text-center" style={{ color: '#f87171' }}>{error}</p>
           )}
         </div>
 
         <button
           onClick={() => router.push('/')}
-          className="text-white/25 hover:text-white/45 text-sm transition-colors"
+          className="text-sm transition-colors"
+          style={{ color: 'rgba(255,255,255,0.25)' }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = 'rgba(79,195,247,0.6)')}
+          onMouseLeave={(e) => (e.currentTarget.style.color = 'rgba(255,255,255,0.25)')}
         >
           ← 지도로 돌아가기
         </button>
