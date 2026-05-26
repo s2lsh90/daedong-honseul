@@ -1,14 +1,10 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import mapboxgl from 'mapbox-gl';
+import 'mapbox-gl/dist/mapbox-gl.css';
 
-declare global {
-  interface Window {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    kakao: any;
-  }
-}
-
+// ── 타입 ──────────────────────────────────────────────────────────────
 interface BarWithStats {
   id: string;
   name: string;
@@ -33,8 +29,18 @@ interface Cluster {
   label: string;
 }
 
-const CLUSTER_THRESHOLD = 6;
+// ── 상수 ──────────────────────────────────────────────────────────────
+const INIT_LNG  = 126.9918;
+const INIT_LAT  = 37.5519;
+const INIT_ZOOM = 11;
 
+// 이 줌 이하면 클러스터 뷰 (Mapbox는 숫자 클수록 확대)
+const CLUSTER_ZOOM = 12;
+
+// 양피지 느낌 CSS 필터 — 맵 캔버스에만 적용 (마커는 별도)
+const MAP_CANVAS_FILTER = 'sepia(0.38) brightness(1.12) saturate(0.58) contrast(0.87)';
+
+// ── 지역 레이블 ────────────────────────────────────────────────────────
 const AREA_LABELS = [
   { name: '홍대',        lat: 37.5558, lng: 126.9236 },
   { name: '합정·망원',   lat: 37.5490, lng: 126.9140 },
@@ -56,6 +62,7 @@ const AREA_LABELS = [
   { name: '압구정·선릉', lat: 37.5259, lng: 127.0388 },
 ];
 
+// ── 유틸 함수 ──────────────────────────────────────────────────────────
 function getNearestArea(lat: number, lng: number): string {
   let minDist = Infinity, name = '서울';
   for (const a of AREA_LABELS) {
@@ -91,217 +98,222 @@ function getOccupancyColor(total: number, capacity: number): string {
   return '#a0332b';
 }
 
-// ── 보드게임 스타일: 클러스터 핀 ──
+/** 위경도 중심 + 반지름(m) → GeoJSON Polygon (원 근사) */
+function createGeoJSONCircle(
+  lat: number, lng: number, radiusMeters: number, points = 48,
+): GeoJSON.Geometry {
+  const coords: [number, number][] = [];
+  const dLng = radiusMeters / (111320 * Math.cos((lat * Math.PI) / 180));
+  const dLat = radiusMeters / 110540;
+  for (let i = 0; i < points; i++) {
+    const theta = (i / points) * 2 * Math.PI;
+    coords.push([lng + dLng * Math.cos(theta), lat + dLat * Math.sin(theta)]);
+  }
+  coords.push(coords[0]);
+  return { type: 'Polygon', coordinates: [coords] };
+}
+
+// ── 핀 HTML ────────────────────────────────────────────────────────────
 function buildClusterHTML(cluster: Cluster): string {
   const total = cluster.male + cluster.female;
   const color = getOccupancyColor(total, cluster.count * 20);
   const statusLabel = total === 0 ? '한산' : color === '#2d8a5e' ? '여유' : color === '#b5730a' ? '보통' : '혼잡';
 
   return `
-    <div style="position:relative; text-align:center; font-family:Georgia,'Times New Roman',serif; cursor:pointer; user-select:none;">
+    <div style="position:relative;text-align:center;font-family:Georgia,'Times New Roman',serif;cursor:pointer;user-select:none;">
       <div style="
         position:relative;
-        background:linear-gradient(160deg, #f9f1d8 0%, #f0e0a8 55%, #e6d08a 100%);
+        background:linear-gradient(160deg,#f9f1d8 0%,#f0e0a8 55%,#e6d08a 100%);
         border:2.5px solid #7a4f10;
         border-radius:3px;
         padding:9px 22px;
-        box-shadow:3px 4px 10px rgba(60,30,0,0.45), inset 0 1px 0 rgba(255,255,255,0.55), inset 0 -1px 0 rgba(120,70,10,0.15);
+        box-shadow:3px 4px 10px rgba(60,30,0,0.45),inset 0 1px 0 rgba(255,255,255,0.55),inset 0 -1px 0 rgba(120,70,10,0.15);
         min-width:128px;
       ">
-        <div style="position:absolute; left:-9px; top:50%; transform:translateY(-50%);
-          width:18px; height:30px;
+        <div style="position:absolute;left:-9px;top:50%;transform:translateY(-50%);
+          width:18px;height:30px;
           background:linear-gradient(180deg,#e8c060 0%,#c8952a 48%,#e8c060 100%);
-          border-radius:4px; border:2px solid #7a4f10;
+          border-radius:4px;border:2px solid #7a4f10;
           box-shadow:2px 2px 5px rgba(0,0,0,0.3);"></div>
-        <div style="position:absolute; right:-9px; top:50%; transform:translateY(-50%);
-          width:18px; height:30px;
+        <div style="position:absolute;right:-9px;top:50%;transform:translateY(-50%);
+          width:18px;height:30px;
           background:linear-gradient(180deg,#e8c060 0%,#c8952a 48%,#e8c060 100%);
-          border-radius:4px; border:2px solid #7a4f10;
+          border-radius:4px;border:2px solid #7a4f10;
           box-shadow:2px 2px 5px rgba(0,0,0,0.3);"></div>
-
-        <div style="font-size:13px; font-weight:800; color:#3a1c00; white-space:nowrap; letter-spacing:-0.3px; text-shadow:0 1px 0 rgba(255,255,255,0.5);">
+        <div style="font-size:13px;font-weight:800;color:#3a1c00;white-space:nowrap;letter-spacing:-0.3px;text-shadow:0 1px 0 rgba(255,255,255,0.5);">
           ${cluster.label} 혼술바
         </div>
-        <div style="margin-top:5px; display:flex; gap:7px; justify-content:center; align-items:center;">
-          <span style="font-size:11px; color:#2a4e7a; font-weight:700;">♂ ${cluster.male}</span>
-          <span style="font-size:9px; color:#9a7030; opacity:0.6;">·</span>
-          <span style="font-size:11px; color:#7a2848; font-weight:700;">♀ ${cluster.female}</span>
-          <span style="font-size:9px; color:#9a7030; opacity:0.6;">·</span>
-          <span style="font-size:10px; color:${color}; font-weight:700;">${cluster.count}곳 ${statusLabel}</span>
+        <div style="margin-top:5px;display:flex;gap:7px;justify-content:center;align-items:center;">
+          <span style="font-size:11px;color:#2a4e7a;font-weight:700;">♂ ${cluster.male}</span>
+          <span style="font-size:9px;color:#9a7030;opacity:0.6;">·</span>
+          <span style="font-size:11px;color:#7a2848;font-weight:700;">♀ ${cluster.female}</span>
+          <span style="font-size:9px;color:#9a7030;opacity:0.6;">·</span>
+          <span style="font-size:10px;color:${color};font-weight:700;">${cluster.count}곳 ${statusLabel}</span>
         </div>
       </div>
-      <div style="display:flex; justify-content:center;">
-        <div style="width:0; height:0;
-          border-left:9px solid transparent;
-          border-right:9px solid transparent;
-          border-top:11px solid #7a4f10;"></div>
+      <div style="display:flex;justify-content:center;">
+        <div style="width:0;height:0;border-left:9px solid transparent;border-right:9px solid transparent;border-top:11px solid #7a4f10;"></div>
       </div>
-    </div>
-  `;
+    </div>`;
 }
 
-// ── 보드게임 스타일: 개별 핀 ──
 function buildPinHTML(bar: BarWithStats, isSelected: boolean): string {
   const { male, female } = bar.stats;
   const total  = male + female;
   const color  = getOccupancyColor(total, bar.capacity);
   const statusLabel = total === 0 ? '한산' : color === '#2d8a5e' ? '여유' : color === '#b5730a' ? '보통' : '혼잡';
-  const pinFill  = isSelected ? '#c8952a' : '#c0392b';
-  const pinDark  = isSelected ? '#7a4f10' : '#8b2020';
-  const shadow   = isSelected
+  const pinFill = isSelected ? '#c8952a' : '#c0392b';
+  const pinDark = isSelected ? '#7a4f10' : '#8b2020';
+  const shadow  = isSelected
     ? '0 0 0 2.5px #c8952a, 3px 4px 10px rgba(60,30,0,0.5)'
     : '2px 3px 8px rgba(60,30,0,0.38)';
 
   return `
-    <div style="position:relative; text-align:center; font-family:Georgia,serif; cursor:pointer; user-select:none;">
+    <div style="position:relative;text-align:center;font-family:Georgia,serif;cursor:pointer;user-select:none;">
       <div style="
         position:relative;
-        background:linear-gradient(160deg, #f9f1d8 0%, #f0e0a8 55%, #e6d08a 100%);
+        background:linear-gradient(160deg,#f9f1d8 0%,#f0e0a8 55%,#e6d08a 100%);
         border:2px solid #7a4f10;
         border-radius:3px;
         padding:5px 17px;
         margin-bottom:5px;
-        box-shadow:${shadow}, inset 0 1px 0 rgba(255,255,255,0.55);
+        box-shadow:${shadow},inset 0 1px 0 rgba(255,255,255,0.55);
         min-width:92px;
       ">
-        <div style="position:absolute; left:-7px; top:50%; transform:translateY(-50%);
-          width:14px; height:22px;
+        <div style="position:absolute;left:-7px;top:50%;transform:translateY(-50%);
+          width:14px;height:22px;
           background:linear-gradient(180deg,#e8c060,#c8952a,#e8c060);
-          border-radius:3px; border:1.5px solid #7a4f10;
+          border-radius:3px;border:1.5px solid #7a4f10;
           box-shadow:1px 1px 3px rgba(0,0,0,0.25);"></div>
-        <div style="position:absolute; right:-7px; top:50%; transform:translateY(-50%);
-          width:14px; height:22px;
+        <div style="position:absolute;right:-7px;top:50%;transform:translateY(-50%);
+          width:14px;height:22px;
           background:linear-gradient(180deg,#e8c060,#c8952a,#e8c060);
-          border-radius:3px; border:1.5px solid #7a4f10;
+          border-radius:3px;border:1.5px solid #7a4f10;
           box-shadow:1px 1px 3px rgba(0,0,0,0.25);"></div>
-
-        <div style="font-size:11px; font-weight:800; color:#3a1c00; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:115px; letter-spacing:-0.3px; text-shadow:0 1px 0 rgba(255,255,255,0.5);">
+        <div style="font-size:11px;font-weight:800;color:#3a1c00;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:115px;letter-spacing:-0.3px;text-shadow:0 1px 0 rgba(255,255,255,0.5);">
           ${bar.name}
         </div>
-        <div style="display:flex; gap:5px; justify-content:center; margin-top:3px; align-items:center;">
-          <span style="font-size:10px; color:#2a4e7a; font-weight:700;">♂ ${male}</span>
-          <span style="font-size:10px; color:#7a2848; font-weight:700;">♀ ${female}</span>
-          <span style="font-size:8px; color:${color}; font-weight:800; background:rgba(0,0,0,0.07); padding:1px 5px; border-radius:99px; border:1px solid ${color}55;">${statusLabel}</span>
+        <div style="display:flex;gap:5px;justify-content:center;margin-top:3px;align-items:center;">
+          <span style="font-size:10px;color:#2a4e7a;font-weight:700;">♂ ${male}</span>
+          <span style="font-size:10px;color:#7a2848;font-weight:700;">♀ ${female}</span>
+          <span style="font-size:8px;color:${color};font-weight:800;background:rgba(0,0,0,0.07);padding:1px 5px;border-radius:99px;border:1px solid ${color}55;">${statusLabel}</span>
         </div>
       </div>
-      <div style="display:flex; justify-content:center;">
+      <div style="display:flex;justify-content:center;">
         <svg width="20" height="27" viewBox="0 0 20 27" style="filter:drop-shadow(1px 2px 3px rgba(0,0,0,0.3));" xmlns="http://www.w3.org/2000/svg">
-          <path d="M10 26 C10 26,1 16,1 10 A9 9 0 0 1 19 10 C19 16,10 26,10 26Z"
-                fill="${pinFill}" stroke="${pinDark}" stroke-width="1.5"/>
+          <path d="M10 26 C10 26,1 16,1 10 A9 9 0 0 1 19 10 C19 16,10 26,10 26Z" fill="${pinFill}" stroke="${pinDark}" stroke-width="1.5"/>
           <circle cx="10" cy="10" r="4" fill="rgba(255,255,255,0.32)"/>
         </svg>
       </div>
-    </div>
-  `;
+    </div>`;
 }
 
-// ── 보드게임 스타일: 지도 필터 (따뜻한 양피지/수채화 느낌) ──
-const MAP_FILTER       = 'sepia(0.38) brightness(1.12) saturate(0.58) contrast(0.87)';
-const PIN_FILTER       = 'brightness(1.08) saturate(1.35)';
-const PIN_FILTER_HOVER = 'brightness(1.2) saturate(1.6)';
-
+// ── 메인 컴포넌트 ──────────────────────────────────────────────────────
 export default function MapClient({ bars, onBarClick, selectedBarId }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const mapRef      = useRef<any>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const overlaysRef = useRef<any[]>([]);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const circlesRef  = useRef<any[]>([]);
-  const [mapReady,  setMapReady]  = useState(false);
-  const [zoomLevel, setZoomLevel] = useState(7);
+  const mapRef       = useRef<mapboxgl.Map | null>(null);
+  const markersRef   = useRef<mapboxgl.Marker[]>([]);
+  const [mapReady,   setMapReady]  = useState(false);
+  const [zoom,       setZoom]      = useState(INIT_ZOOM);
 
+  // ── 지도 초기화 ──
   useEffect(() => {
-    if (!containerRef.current) return;
-    const initMap = () => {
-      window.kakao.maps.load(() => {
-        const center = new window.kakao.maps.LatLng(37.5519, 126.9918);
-        const map    = new window.kakao.maps.Map(containerRef.current, { center, level: 7 });
-        mapRef.current = map;
-        if (containerRef.current) containerRef.current.style.filter = MAP_FILTER;
-        window.kakao.maps.event.addListener(map, 'zoom_changed', () => setZoomLevel(map.getLevel()));
-        setMapReady(true);
+    if (!containerRef.current || mapRef.current) return;
+
+    mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? '';
+
+    const map = new mapboxgl.Map({
+      container: containerRef.current,
+      style: 'mapbox://styles/mapbox/light-v11',
+      center:  [INIT_LNG, INIT_LAT],
+      zoom:    INIT_ZOOM,
+      minZoom: 10,
+      maxZoom: 17,
+      attributionControl: false,
+    });
+
+    // 줌 버튼 (우하단)
+    map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'bottom-right');
+
+    map.on('load', () => {
+      // ── 캔버스에만 양피지 필터 적용 (마커는 영향 없음) ──
+      map.getCanvas().style.filter = MAP_CANVAS_FILTER;
+
+      // ── 빈 GeoJSON 소스 + 서클 레이어 등록 ──
+      map.addSource('circles', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] },
       });
-    };
-    if (window.kakao) { initMap(); return; }
-    const interval = setInterval(() => { if (window.kakao) { clearInterval(interval); initMap(); } }, 200);
-    return () => clearInterval(interval);
+
+      map.addLayer({
+        id: 'circle-fill',
+        type: 'fill',
+        source: 'circles',
+        paint: {
+          'fill-color':   ['get', 'color'],
+          'fill-opacity': ['get', 'fillOpacity'],
+        },
+      });
+
+      map.addLayer({
+        id: 'circle-line',
+        type: 'line',
+        source: 'circles',
+        paint: {
+          'line-color':   '#8b6010',
+          'line-width':   1.5,
+          'line-opacity': ['get', 'strokeOpacity'],
+        },
+      });
+
+      setMapReady(true);
+    });
+
+    map.on('zoom', () => setZoom(map.getZoom()));
+
+    mapRef.current = map;
+    return () => { map.remove(); mapRef.current = null; };
   }, []);
 
+  // ── 마커 & 서클 업데이트 ──
   useEffect(() => {
     if (!mapReady || !mapRef.current) return;
+    const map = mapRef.current;
+    const isClustered = zoom < CLUSTER_ZOOM;
 
-    overlaysRef.current.forEach(ov => ov.setMap(null));
-    overlaysRef.current = [];
-    circlesRef.current.forEach(c => c.setMap(null));
-    circlesRef.current = [];
+    // 기존 마커 제거
+    markersRef.current.forEach(m => m.remove());
+    markersRef.current = [];
 
-    const isClustered = zoomLevel >= CLUSTER_THRESHOLD;
-
-    // ── 영토 서클: 보드게임 수채화 스타일 ──
-    const addCircle = (
-      lat: number, lng: number, radius: number,
-      strokeColor: string, strokeOpacity: number,
-      fillColor: string, fillOpacity: number,
-    ) => {
-      const circle = new window.kakao.maps.Circle({
-        center:        new window.kakao.maps.LatLng(lat, lng),
-        radius,
-        strokeWeight:  1.5,
-        strokeColor,
-        strokeOpacity,
-        fillColor,
-        fillOpacity,
-      });
-      circle.setMap(mapRef.current);
-      circlesRef.current.push(circle);
-    };
-
-    const addOverlay = (
-      el: HTMLElement,
-      lat: number, lng: number,
-      zIndex: number,
-      onClick: () => void,
-      isClickable = true,
-    ) => {
-      el.style.position   = 'relative';
-      el.style.filter     = PIN_FILTER;
-      el.style.transition = 'filter 0.15s';
-      el.onclick = onClick;
-      if (isClickable) {
-        el.onmouseenter = () => { el.style.filter = PIN_FILTER_HOVER; };
-        el.onmouseleave = () => { el.style.filter = PIN_FILTER; };
-      }
-      const overlay = new window.kakao.maps.CustomOverlay({
-        position: new window.kakao.maps.LatLng(lat, lng),
-        content:  el,
-        xAnchor:  0.5,
-        yAnchor:  1.3,
-        zIndex,
-      });
-      overlay.setMap(mapRef.current);
-      overlaysRef.current.push(overlay);
-    };
+    const circleFeatures: GeoJSON.Feature[] = [];
 
     if (isClustered) {
-      const gridSize = zoomLevel >= 8 ? 0.05 : zoomLevel === 7 ? 0.03 : 0.018;
-      const clusters = computeClusters(bars, gridSize);
+      const gridSize = zoom < 11 ? 0.05 : 0.025;
+      const clusters  = computeClusters(bars, gridSize);
 
       clusters.forEach(cluster => {
         const total  = cluster.male + cluster.female;
         const color  = getOccupancyColor(total, cluster.count * 20);
-        const radius = Math.min(1800, 700 + cluster.count * 220);
+        const radius = Math.min(2000, 800 + cluster.count * 250);
 
-        // 수채화 영토 서클 (두 겹, 갈색 잉크 경계선 + 수채화 채움)
-        addCircle(cluster.lat, cluster.lng, radius,       '#8b6010', 0.45, color, 0.07);
-        addCircle(cluster.lat, cluster.lng, radius * 0.5, '#8b6010', 0.28, color, 0.11);
+        circleFeatures.push(
+          { type: 'Feature', geometry: createGeoJSONCircle(cluster.lat, cluster.lng, radius),
+            properties: { color, fillOpacity: 0.07, strokeOpacity: 0.45 } },
+          { type: 'Feature', geometry: createGeoJSONCircle(cluster.lat, cluster.lng, radius * 0.5),
+            properties: { color, fillOpacity: 0.11, strokeOpacity: 0.28 } },
+        );
 
         const el = document.createElement('div');
         el.innerHTML = buildClusterHTML(cluster);
-        addOverlay(el, cluster.lat, cluster.lng, 2, () => {
-          mapRef.current.setCenter(new window.kakao.maps.LatLng(cluster.lat, cluster.lng));
-          mapRef.current.setLevel(4, { animate: true });
-        });
+        el.addEventListener('click', () =>
+          map.flyTo({ center: [cluster.lng, cluster.lat], zoom: 13, duration: 600 }),
+        );
+
+        markersRef.current.push(
+          new mapboxgl.Marker({ element: el, anchor: 'bottom' })
+            .setLngLat([cluster.lng, cluster.lat])
+            .addTo(map),
+        );
       });
 
     } else {
@@ -309,24 +321,44 @@ export default function MapClient({ bars, onBarClick, selectedBarId }: Props) {
         const total = bar.stats.male + bar.stats.female;
         const color = getOccupancyColor(total, bar.capacity);
 
-        // 수채화 영토 서클
-        addCircle(bar.lat, bar.lng, 320, '#8b6010', 0.4, color, 0.09);
-        addCircle(bar.lat, bar.lng, 140, '#8b6010', 0.25, color, 0.14);
+        circleFeatures.push(
+          { type: 'Feature', geometry: createGeoJSONCircle(bar.lat, bar.lng, 320),
+            properties: { color, fillOpacity: 0.09, strokeOpacity: 0.40 } },
+          { type: 'Feature', geometry: createGeoJSONCircle(bar.lat, bar.lng, 140),
+            properties: { color, fillOpacity: 0.14, strokeOpacity: 0.25 } },
+        );
 
         const isSelected = bar.id === selectedBarId;
         const el = document.createElement('div');
         el.innerHTML = buildPinHTML(bar, isSelected);
-        addOverlay(el, bar.lat, bar.lng, isSelected ? 10 : 1, () => onBarClick(bar.id));
+        el.addEventListener('click', () => onBarClick(bar.id));
+        el.addEventListener('mouseenter', () => { el.style.transform = 'scale(1.05)'; });
+        el.addEventListener('mouseleave', () => { el.style.transform = 'scale(1)'; });
+        el.style.transition = 'transform 0.15s';
+
+        markersRef.current.push(
+          new mapboxgl.Marker({ element: el, anchor: 'bottom' })
+            .setLngLat([bar.lng, bar.lat])
+            .addTo(map),
+        );
       });
     }
-  }, [bars, selectedBarId, onBarClick, mapReady, zoomLevel]);
 
-  const isClustered = zoomLevel >= CLUSTER_THRESHOLD;
+    // 서클 데이터 갱신
+    (map.getSource('circles') as mapboxgl.GeoJSONSource).setData({
+      type: 'FeatureCollection',
+      features: circleFeatures,
+    });
+
+  }, [bars, selectedBarId, onBarClick, mapReady, zoom]);
+
+  const isClustered = zoom < CLUSTER_ZOOM;
 
   return (
     <div className="relative w-full h-full">
       <div ref={containerRef} className="w-full h-full" />
 
+      {/* 줌 안내 */}
       {mapReady && isClustered && (
         <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-[400] pointer-events-none">
           <div className="flex items-center gap-2 px-4 py-2 text-xs whitespace-nowrap"
@@ -344,12 +376,15 @@ export default function MapClient({ bars, onBarClick, selectedBarId }: Props) {
         </div>
       )}
 
+      {/* 로딩 */}
       {!mapReady && (
         <div className="absolute inset-0 flex items-center justify-center"
           style={{ background: '#f0e0a8' }}>
           <div className="text-center space-y-3">
             <div className="text-4xl animate-bounce">🗺️</div>
-            <p className="text-sm" style={{ color: '#8b6010', fontFamily: "Georgia, serif" }}>지도 펼치는 중...</p>
+            <p className="text-sm" style={{ color: '#8b6010', fontFamily: 'Georgia, serif' }}>
+              지도 펼치는 중...
+            </p>
           </div>
         </div>
       )}
