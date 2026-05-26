@@ -24,61 +24,186 @@ interface Props {
   selectedBarId: string | null;
 }
 
-function getOccupancyColor(total: number, capacity: number): string {
-  const ratio = capacity > 0 ? total / capacity : 0;
-  if (ratio < 0.4) return '#22c55e';
-  if (ratio < 0.7) return '#f59e0b';
-  return '#ef4444';
+interface Cluster {
+  lat: number;
+  lng: number;
+  male: number;
+  female: number;
+  count: number;
+  label: string;
 }
 
-function buildPinHTML(bar: BarWithStats, isSelected: boolean): string {
-  const { male, female } = bar.stats;
-  const total = male + female;
-  const color = getOccupancyColor(total, bar.capacity);
-  const border = isSelected ? '2px solid #f59e0b' : `2px solid ${color}`;
-  const shadow = isSelected
-    ? '0 0 0 3px rgba(245,158,11,0.3), 0 6px 20px rgba(0,0,0,0.6)'
-    : '0 4px 14px rgba(0,0,0,0.5)';
-  const scale = isSelected ? 'scale(1.12)' : 'scale(1)';
+// ─── 줌 임계값: 이 레벨 이상이면 클러스터 모드 ───
+const CLUSTER_THRESHOLD = 6;
+
+// ─── 지역 중심 좌표 ───
+const AREA_LABELS = [
+  { name: '홍대',      lat: 37.5558, lng: 126.9236 },
+  { name: '합정·망원', lat: 37.5490, lng: 126.9140 },
+  { name: '이태원',    lat: 37.5347, lng: 126.9945 },
+  { name: '강남',      lat: 37.4979, lng: 127.0276 },
+  { name: '을지로·종로', lat: 37.5700, lng: 126.9910 },
+  { name: '성수',      lat: 37.5437, lng: 127.0566 },
+  { name: '건대·군자', lat: 37.5404, lng: 127.0706 },
+  { name: '잠실·송파', lat: 37.5070, lng: 127.0980 },
+  { name: '문래',      lat: 37.5172, lng: 126.8978 },
+  { name: '마곡·발산', lat: 37.5592, lng: 126.8339 },
+  { name: '성신여대',  lat: 37.5916, lng: 127.0175 },
+  { name: '연신내',    lat: 37.6183, lng: 126.9224 },
+  { name: '용산',      lat: 37.5296, lng: 126.9652 },
+  { name: '사당·동작', lat: 37.5043, lng: 126.9798 },
+  { name: '신림',      lat: 37.4844, lng: 126.9298 },
+  { name: '노원',      lat: 37.6556, lng: 127.0681 },
+  { name: '천호',      lat: 37.5382, lng: 127.1240 },
+  { name: '압구정·선릉', lat: 37.5259, lng: 127.0388 },
+];
+
+function getNearestArea(lat: number, lng: number): string {
+  let minDist = Infinity;
+  let name = '서울';
+  for (const area of AREA_LABELS) {
+    const d = (lat - area.lat) ** 2 + (lng - area.lng) ** 2;
+    if (d < minDist) { minDist = d; name = area.name; }
+  }
+  return name;
+}
+
+function computeClusters(bars: BarWithStats[], gridSize: number): Cluster[] {
+  const cells = new Map<string, { bars: BarWithStats[]; sumLat: number; sumLng: number }>();
+
+  for (const bar of bars) {
+    const cellLat = Math.round(bar.lat / gridSize) * gridSize;
+    const cellLng = Math.round(bar.lng / gridSize) * gridSize;
+    const key = `${cellLat.toFixed(4)},${cellLng.toFixed(4)}`;
+    if (!cells.has(key)) cells.set(key, { bars: [], sumLat: 0, sumLng: 0 });
+    const cell = cells.get(key)!;
+    cell.bars.push(bar);
+    cell.sumLat += bar.lat;
+    cell.sumLng += bar.lng;
+  }
+
+  return Array.from(cells.values()).map((cell) => {
+    const n = cell.bars.length;
+    const avgLat = cell.sumLat / n;
+    const avgLng = cell.sumLng / n;
+    const male   = cell.bars.reduce((s, b) => s + b.stats.male, 0);
+    const female = cell.bars.reduce((s, b) => s + b.stats.female, 0);
+    return { lat: avgLat, lng: avgLng, male, female, count: n, label: getNearestArea(avgLat, avgLng) };
+  });
+}
+
+// ─── 색상 ───
+function getOccupancyColor(total: number, capacity: number): string {
+  const ratio = capacity > 0 ? total / capacity : 0;
+  if (ratio < 0.4) return '#10b981';
+  if (ratio < 0.7) return '#f59e0b';
+  return '#f43f5e';
+}
+
+// ─── 클러스터 핀 HTML ───
+function buildClusterHTML(cluster: Cluster): string {
+  const total    = cluster.male + cluster.female;
+  const color    = getOccupancyColor(total, cluster.count * 20);
+  const statusLabel = cluster.count === 0 ? '없음' : total === 0 ? '한산' : '영업중';
 
   return `
     <div style="
-      background: #1a1a2e;
-      border: ${border};
-      border-radius: 10px;
-      padding: 5px 10px;
-      text-align: center;
-      min-width: 90px;
-      max-width: 110px;
-      box-shadow: ${shadow};
-      transform: ${scale};
-      cursor: pointer;
+      position: relative;
+      background: rgba(8,8,16,0.96);
+      border: 2px solid ${color};
+      border-radius: 18px;
+      padding: 10px 16px 11px;
+      min-width: 138px;
+      box-shadow: 0 6px 28px rgba(0,0,0,0.7), 0 0 20px ${color}40, 0 0 0 1px rgba(255,255,255,0.05);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      cursor: default;
       user-select: none;
-      transition: transform 0.15s ease;
     ">
-      <div style="
-        font-size: 11px;
-        font-weight: 700;
-        color: #fff;
-        margin-bottom: 4px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      ">${bar.name}</div>
-      <div style="display: flex; gap: 8px; justify-content: center; align-items: center;">
-        <span style="font-size: 12px; color: #60a5fa; font-weight: 600;">♂ ${male}</span>
-        <span style="font-size: 12px; color: #f472b6; font-weight: 600;">♀ ${female}</span>
+      <div style="display:flex; align-items:center; gap:5px; margin-bottom:3px;">
+        <div style="width:6px; height:6px; border-radius:50%; background:${color}; box-shadow:0 0 6px ${color};"></div>
+        <div style="font-size:12.5px; font-weight:800; color:#f0f0f0; letter-spacing:-0.4px; white-space:nowrap;">
+          ${cluster.label} 혼술바
+        </div>
+      </div>
+      <div style="font-size:10px; color:rgba(255,255,255,0.35); margin-bottom:8px; padding-left:11px;">
+        ${cluster.count}개 · ${statusLabel}
+      </div>
+      <div style="display:flex; gap:5px;">
+        <div style="
+          background:rgba(96,165,250,0.14); border:1px solid rgba(96,165,250,0.3);
+          border-radius:99px; padding:2px 10px; font-size:11.5px; color:#93c5fd; font-weight:700;
+        ">♂ ${cluster.male}</div>
+        <div style="
+          background:rgba(244,114,182,0.14); border:1px solid rgba(244,114,182,0.3);
+          border-radius:99px; padding:2px 10px; font-size:11.5px; color:#f9a8d4; font-weight:700;
+        ">♀ ${cluster.female}</div>
       </div>
       <div style="
-        position: absolute;
-        bottom: -7px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 0; height: 0;
-        border-left: 7px solid transparent;
-        border-right: 7px solid transparent;
-        border-top: 7px solid ${isSelected ? '#f59e0b' : color};
+        position:absolute; bottom:-9px; left:50%; transform:translateX(-50%);
+        width:0; height:0;
+        border-left:9px solid transparent; border-right:9px solid transparent;
+        border-top:9px solid rgba(8,8,16,0.96);
       "></div>
+    </div>
+  `;
+}
+
+// ─── 개별 핀 HTML ───
+function buildPinHTML(bar: BarWithStats, isSelected: boolean): string {
+  const { male, female } = bar.stats;
+  const total    = male + female;
+  const ratio    = bar.capacity > 0 ? total / bar.capacity : 0;
+  const color    = getOccupancyColor(total, bar.capacity);
+  const statusLabel = ratio < 0.4 ? '여유' : ratio < 0.7 ? '보통' : '혼잡';
+  const barWidth = Math.min(100, Math.round(ratio * 100));
+
+  const shadow = isSelected
+    ? `0 0 0 2px #f59e0b, 0 0 18px rgba(245,158,11,0.45), 0 8px 28px rgba(0,0,0,0.7)`
+    : `0 4px 20px rgba(0,0,0,0.55), 0 1px 4px rgba(0,0,0,0.4)`;
+  const scale          = isSelected ? 'scale(1.1)' : 'scale(1)';
+  const topBorderColor = isSelected ? '#f59e0b' : color;
+
+  return `
+    <div style="
+      position:relative;
+      background:rgba(10,10,18,0.94);
+      border:1px solid rgba(255,255,255,${isSelected ? '0.18' : '0.07'});
+      border-top:3px solid ${topBorderColor};
+      border-radius:14px;
+      padding:8px 11px 9px;
+      min-width:110px; max-width:140px;
+      box-shadow:${shadow};
+      transform:${scale}; transform-origin:bottom center;
+      cursor:pointer; user-select:none;
+      font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    ">
+      <div style="font-size:11.5px; font-weight:700; color:#f0f0f0;
+        white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+        margin-bottom:7px; letter-spacing:-0.3px;">
+        ${bar.name}
+      </div>
+      <div style="display:flex; gap:5px; align-items:center; margin-bottom:7px;">
+        <div style="background:rgba(96,165,250,0.14); border:1px solid rgba(96,165,250,0.28);
+          border-radius:99px; padding:2px 8px; font-size:11px; color:#93c5fd; font-weight:600;">
+          ♂ ${male}
+        </div>
+        <div style="background:rgba(244,114,182,0.14); border:1px solid rgba(244,114,182,0.28);
+          border-radius:99px; padding:2px 8px; font-size:11px; color:#f9a8d4; font-weight:600;">
+          ♀ ${female}
+        </div>
+        <div style="margin-left:auto; font-size:9.5px; font-weight:700; color:${color};
+          letter-spacing:-0.2px; white-space:nowrap;">
+          ${statusLabel}
+        </div>
+      </div>
+      <div style="height:3px; background:rgba(255,255,255,0.07); border-radius:99px; overflow:hidden;">
+        <div style="height:100%; width:${barWidth}%;
+          background:linear-gradient(90deg,${color}88,${color}); border-radius:99px;"></div>
+      </div>
+      <div style="position:absolute; bottom:-8px; left:50%; transform:translateX(-50%);
+        width:0; height:0;
+        border-left:8px solid transparent; border-right:8px solid transparent;
+        border-top:8px solid rgba(10,10,18,0.94);"></div>
     </div>
   `;
 }
@@ -86,91 +211,108 @@ function buildPinHTML(bar: BarWithStats, isSelected: boolean): string {
 export default function MapClient({ bars, onBarClick, selectedBarId }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const mapRef = useRef<any>(null);
+  const mapRef       = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const overlaysRef = useRef<Map<string, any>>(new Map());
-  const [mapReady, setMapReady] = useState(false);
+  const overlaysRef  = useRef<any[]>([]);
+  const [mapReady,  setMapReady]  = useState(false);
+  const [zoomLevel, setZoomLevel] = useState(7);
 
-  // 카카오맵 초기화
+  // ── 카카오맵 초기화 ──
   useEffect(() => {
     if (!containerRef.current) return;
 
     const initMap = () => {
       window.kakao.maps.load(() => {
         const center = new window.kakao.maps.LatLng(37.5519, 126.9918);
-        const map = new window.kakao.maps.Map(containerRef.current, {
-          center,
-          level: 7,
-        });
+        const map    = new window.kakao.maps.Map(containerRef.current, { center, level: 7 });
         mapRef.current = map;
+
+        // 줌 변경 감지
+        window.kakao.maps.event.addListener(map, 'zoom_changed', () => {
+          setZoomLevel(map.getLevel());
+        });
+
         setMapReady(true);
       });
     };
 
-    // next/script afterInteractive가 로드될 때까지 polling
-    if (window.kakao) {
-      initMap();
-      return;
-    }
+    if (window.kakao) { initMap(); return; }
 
     const interval = setInterval(() => {
-      if (window.kakao) {
-        clearInterval(interval);
-        initMap();
-      }
+      if (window.kakao) { clearInterval(interval); initMap(); }
     }, 200);
-
     return () => clearInterval(interval);
   }, []);
 
-  // 오버레이(핀) 업데이트
+  // ── 오버레이 업데이트 ──
   useEffect(() => {
     if (!mapReady || !mapRef.current) return;
 
-    const existingIds = new Set(overlaysRef.current.keys());
+    // 기존 오버레이 전부 제거
+    overlaysRef.current.forEach((ov) => ov.setMap(null));
+    overlaysRef.current = [];
 
-    bars.forEach((bar) => {
-      const isSelected = bar.id === selectedBarId;
-      const content = buildPinHTML(bar, isSelected);
+    const isClustered = zoomLevel >= CLUSTER_THRESHOLD;
 
-      if (overlaysRef.current.has(bar.id)) {
-        // 기존 오버레이 내용 업데이트
-        const overlay = overlaysRef.current.get(bar.id);
-        const el = overlay.getContent() as HTMLElement;
-        el.innerHTML = content;
-        // 클릭 핸들러 재등록
-        el.onclick = () => onBarClick(bar.id);
-      } else {
-        // 새 오버레이 생성
-        const el = document.createElement('div');
-        el.innerHTML = content;
+    if (isClustered) {
+      // 줌 레벨별 그리드 크기 (도 단위, 서울에서 약 1~4km)
+      const gridSize = zoomLevel >= 8 ? 0.05 : zoomLevel === 7 ? 0.03 : 0.018;
+      const clusters = computeClusters(bars, gridSize);
+
+      clusters.forEach((cluster) => {
+        const el       = document.createElement('div');
+        el.innerHTML   = buildClusterHTML(cluster);
         el.style.position = 'relative';
-        el.onclick = () => onBarClick(bar.id);
+        // 클러스터는 클릭 비활성화
+
+        const overlay = new window.kakao.maps.CustomOverlay({
+          position: new window.kakao.maps.LatLng(cluster.lat, cluster.lng),
+          content:  el,
+          xAnchor:  0.5,
+          yAnchor:  1.3,
+          zIndex:   1,
+        });
+        overlay.setMap(mapRef.current);
+        overlaysRef.current.push(overlay);
+      });
+    } else {
+      // 개별 핀 모드
+      bars.forEach((bar) => {
+        const isSelected = bar.id === selectedBarId;
+        const el         = document.createElement('div');
+        el.innerHTML     = buildPinHTML(bar, isSelected);
+        el.style.position = 'relative';
+        el.onclick       = () => onBarClick(bar.id);
 
         const overlay = new window.kakao.maps.CustomOverlay({
           position: new window.kakao.maps.LatLng(bar.lat, bar.lng),
-          content: el,
-          xAnchor: 0.5,
-          yAnchor: 1.3,
-          zIndex: isSelected ? 10 : 1,
+          content:  el,
+          xAnchor:  0.5,
+          yAnchor:  1.3,
+          zIndex:   isSelected ? 10 : 1,
         });
         overlay.setMap(mapRef.current);
-        overlaysRef.current.set(bar.id, overlay);
-      }
+        overlaysRef.current.push(overlay);
+      });
+    }
+  }, [bars, selectedBarId, onBarClick, mapReady, zoomLevel]);
 
-      existingIds.delete(bar.id);
-    });
-
-    // 삭제된 바 핀 제거
-    existingIds.forEach((id) => {
-      overlaysRef.current.get(id)?.setMap(null);
-      overlaysRef.current.delete(id);
-    });
-  }, [bars, selectedBarId, onBarClick, mapReady]);
+  const isClustered = zoomLevel >= CLUSTER_THRESHOLD;
 
   return (
     <div className="relative w-full h-full">
       <div ref={containerRef} className="w-full h-full" />
+
+      {/* 줌 안내 힌트 */}
+      {mapReady && isClustered && (
+        <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-[400] pointer-events-none">
+          <div className="flex items-center gap-2 bg-black/55 backdrop-blur-sm rounded-full px-4 py-2 text-white/60 text-xs whitespace-nowrap">
+            <span className="text-base">🔍</span>
+            확대하면 개별 혼술바를 볼 수 있어요
+          </div>
+        </div>
+      )}
+
       {!mapReady && (
         <div className="absolute inset-0 flex items-center justify-center bg-[#0d0d14]">
           <div className="text-center space-y-3">

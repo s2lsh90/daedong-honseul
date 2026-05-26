@@ -93,6 +93,107 @@ export default function MapPage() {
       {/* Map */}
       <MapClient bars={bars} onBarClick={setSelectedBarId} selectedBarId={selectedBarId} />
 
+      {/* ── 액자 프레임 오버레이 ── */}
+      <div className="absolute inset-0 z-[300] pointer-events-none overflow-hidden">
+
+        {/* 비네트 */}
+        <div className="absolute inset-0" style={{ boxShadow: 'inset 0 0 120px rgba(0,0,0,0.6)' }} />
+
+        {/* 바깥 두꺼운 테두리 */}
+        <div
+          className="absolute rounded-[24px]"
+          style={{
+            inset: '14px',
+            border: '3.5px solid rgba(245,158,11,0.78)',
+            boxShadow:
+              '0 0 0 1px rgba(245,158,11,0.15), inset 0 0 30px rgba(245,158,11,0.05), 0 0 28px rgba(245,158,11,0.12)',
+          }}
+        />
+
+        {/* 안쪽 얇은 이중선 */}
+        <div
+          className="absolute rounded-[18px]"
+          style={{
+            inset: '24px',
+            border: '1px solid rgba(245,158,11,0.32)',
+          }}
+        />
+
+        {/* ── 코너 메달리온 (술 아이콘) ── */}
+        {/* 상단 왼쪽 🍺 */}
+        <div
+          className="absolute top-[3px] left-[3px] w-[46px] h-[46px] rounded-full flex items-center justify-center text-[22px]"
+          style={{
+            background: 'radial-gradient(circle at 38% 32%, #3d2804, #180e01)',
+            border: '3px solid rgba(245,158,11,0.85)',
+            boxShadow: '0 0 16px rgba(245,158,11,0.6), 0 0 5px rgba(245,158,11,1), inset 0 1px 0 rgba(255,220,100,0.18)',
+          }}
+        >🍺</div>
+
+        {/* 상단 오른쪽 🥃 */}
+        <div
+          className="absolute top-[3px] right-[3px] w-[46px] h-[46px] rounded-full flex items-center justify-center text-[22px]"
+          style={{
+            background: 'radial-gradient(circle at 38% 32%, #3d2804, #180e01)',
+            border: '3px solid rgba(245,158,11,0.85)',
+            boxShadow: '0 0 16px rgba(245,158,11,0.6), 0 0 5px rgba(245,158,11,1), inset 0 1px 0 rgba(255,220,100,0.18)',
+          }}
+        >🥃</div>
+
+        {/* 하단 왼쪽 🍷 */}
+        <div
+          className="absolute bottom-[3px] left-[3px] w-[46px] h-[46px] rounded-full flex items-center justify-center text-[22px]"
+          style={{
+            background: 'radial-gradient(circle at 38% 32%, #3d2804, #180e01)',
+            border: '3px solid rgba(245,158,11,0.85)',
+            boxShadow: '0 0 16px rgba(245,158,11,0.6), 0 0 5px rgba(245,158,11,1), inset 0 1px 0 rgba(255,220,100,0.18)',
+          }}
+        >🍷</div>
+
+        {/* 하단 오른쪽 🍸 */}
+        <div
+          className="absolute bottom-[3px] right-[3px] w-[46px] h-[46px] rounded-full flex items-center justify-center text-[22px]"
+          style={{
+            background: 'radial-gradient(circle at 38% 32%, #3d2804, #180e01)',
+            border: '3px solid rgba(245,158,11,0.85)',
+            boxShadow: '0 0 16px rgba(245,158,11,0.6), 0 0 5px rgba(245,158,11,1), inset 0 1px 0 rgba(255,220,100,0.18)',
+          }}
+        >🍸</div>
+
+        {/* ── 모서리 중간 장식 ── */}
+        {/* 상단 중앙 */}
+        <div className="absolute top-[13px] left-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-[7px]">
+          <div className="h-[1.5px] w-14 bg-gradient-to-r from-transparent to-amber-400/55" />
+          <div className="w-[9px] h-[9px] rotate-45 bg-amber-400" style={{ boxShadow: '0 0 7px rgba(245,158,11,0.9)' }} />
+          <div className="h-[1.5px] w-14 bg-gradient-to-l from-transparent to-amber-400/55" />
+        </div>
+
+        {/* 하단 중앙 — 혼술지도 스탬프 */}
+        <div className="absolute bottom-[13px] left-1/2 -translate-x-1/2 translate-y-1/2 flex items-center gap-[8px]">
+          <div className="h-[1.5px] w-10 bg-gradient-to-r from-transparent to-amber-400/55" />
+          <span
+            className="text-[10px] font-black tracking-[4px] text-amber-400"
+            style={{ textShadow: '0 0 10px rgba(245,158,11,0.75)' }}
+          >혼술지도</span>
+          <div className="h-[1.5px] w-10 bg-gradient-to-l from-transparent to-amber-400/55" />
+        </div>
+
+        {/* 좌측 중앙 */}
+        <div className="absolute left-[13px] top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-[7px]">
+          <div className="w-[1.5px] h-12 bg-gradient-to-b from-transparent to-amber-400/55" />
+          <div className="w-[9px] h-[9px] rotate-45 bg-amber-400" style={{ boxShadow: '0 0 7px rgba(245,158,11,0.9)' }} />
+          <div className="w-[1.5px] h-12 bg-gradient-to-t from-transparent to-amber-400/55" />
+        </div>
+
+        {/* 우측 중앙 */}
+        <div className="absolute right-[13px] top-1/2 translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-[7px]">
+          <div className="w-[1.5px] h-12 bg-gradient-to-b from-transparent to-amber-400/55" />
+          <div className="w-[9px] h-[9px] rotate-45 bg-amber-400" style={{ boxShadow: '0 0 7px rgba(245,158,11,0.9)' }} />
+          <div className="w-[1.5px] h-12 bg-gradient-to-t from-transparent to-amber-400/55" />
+        </div>
+
+      </div>
+
       {/* Active checkin banner */}
       {activeCheckin && activeBar && (
         <div className="absolute bottom-6 left-4 right-4 z-[500]">
