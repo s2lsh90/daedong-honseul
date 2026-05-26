@@ -30,9 +30,9 @@ interface Cluster {
 }
 
 // ── 상수 ──────────────────────────────────────────────────────────────
-const INIT_LNG   = 126.9918;
-const INIT_LAT   = 37.5519;
-const CLUSTER_ZOOM = 12;   // 이 줌 미만 → 클러스터 뷰
+const INIT_LNG     = 126.9918;
+const INIT_LAT     = 37.5519;
+const CLUSTER_ZOOM = 12;
 
 // ── 지역 레이블 ────────────────────────────────────────────────────────
 const AREA_LABELS = [
@@ -56,7 +56,6 @@ const AREA_LABELS = [
   { name: '압구정·선릉', lat: 37.5259, lng: 127.0388 },
 ];
 
-// ── 유틸 ──────────────────────────────────────────────────────────────
 function getNearestArea(lat: number, lng: number): string {
   let minDist = Infinity, name = '서울';
   for (const a of AREA_LABELS) {
@@ -78,30 +77,18 @@ function computeClusters(bars: BarWithStats[], gridSize: number): Cluster[] {
   }
   return Array.from(cells.values()).map(cell => {
     const n = cell.bars.length;
-    const avgLat = cell.sumLat / n, avgLng = cell.sumLng / n;
     const male   = cell.bars.reduce((s, b) => s + b.stats.male, 0);
     const female = cell.bars.reduce((s, b) => s + b.stats.female, 0);
-    return { lat: avgLat, lng: avgLng, male, female, count: n, label: getNearestArea(avgLat, avgLng) };
+    return { lat: cell.sumLat / n, lng: cell.sumLng / n, male, female, count: n,
+      label: getNearestArea(cell.sumLat / n, cell.sumLng / n) };
   });
 }
 
 function getOccupancyColor(total: number, capacity: number) {
   const r = capacity > 0 ? total / capacity : 0;
-  if (r < 0.4) return { color: '#4ade80', glow: 'rgba(74,222,128,0.3)', label: '여유' };
-  if (r < 0.7) return { color: '#fb923c', glow: 'rgba(251,146,60,0.3)',  label: '보통' };
-  return           { color: '#f87171', glow: 'rgba(248,113,113,0.3)',    label: '혼잡' };
-}
-
-function createGeoJSONCircle(lat: number, lng: number, radiusM: number, pts = 48): GeoJSON.Geometry {
-  const coords: [number, number][] = [];
-  const dLng = radiusM / (111320 * Math.cos((lat * Math.PI) / 180));
-  const dLat = radiusM / 110540;
-  for (let i = 0; i < pts; i++) {
-    const t = (i / pts) * 2 * Math.PI;
-    coords.push([lng + dLng * Math.cos(t), lat + dLat * Math.sin(t)]);
-  }
-  coords.push(coords[0]);
-  return { type: 'Polygon', coordinates: [coords] };
+  if (r < 0.4) return { color: '#4ade80', glow: 'rgba(74,222,128,0.3)',   label: '여유' };
+  if (r < 0.7) return { color: '#fb923c', glow: 'rgba(251,146,60,0.3)',   label: '보통' };
+  return           { color: '#f87171', glow: 'rgba(248,113,113,0.3)',     label: '혼잡' };
 }
 
 /** 모든 심볼 레이어 텍스트를 한국어로 변경 */
@@ -118,23 +105,68 @@ function setKorean(map: mapboxgl.Map) {
   } catch { /* skip */ }
 }
 
-// ── 다크 테마 핀 HTML ──────────────────────────────────────────────────
+/**
+ * 타일 색상 커스터마이징 — dark-v11 위에 레이어별로 컬러 오버라이드
+ * 배경 #08081a (UI와 동일) / 물 #0d1f3c / 공원 #0b1a0e / 도로 계열 어두운 네이비
+ */
+function setTileColors(map: mapboxgl.Map) {
+  const pairs: [string, string, string][] = [
+    // [레이어id, paintProp, color]
+    // ── 배경 / 육지 ──
+    ['land',                     'background-color', '#08081a'],
+    ['land-structure',           'background-color', '#08081a'],
+    ['landcover',                'fill-color',       '#08081a'],
+    ['landuse',                  'fill-color',       '#0c0c1e'],
+    ['landuse-residential',      'fill-color',       '#0c0c1e'],
+    // ── 공원 / 자연 ──
+    ['national-park',            'fill-color',       '#0b1710'],
+    ['landuse_overlay',          'fill-color',       '#0b1710'],
+    // ── 물 ──
+    ['water',                    'fill-color',       '#070f1c'],
+    ['water-depth',              'fill-color',       '#060d18'],
+    ['waterway',                 'line-color',       '#0a1525'],
+    ['waterway-shadow',          'line-color',       '#0a1525'],
+    // ── 도로 (어두운 네이비 계열) ──
+    ['road-motorway-trunk',      'line-color',       '#141e32'],
+    ['road-primary',             'line-color',       '#111828'],
+    ['road-secondary-tertiary',  'line-color',       '#0e1520'],
+    ['road-street',              'line-color',       '#0d1320'],
+    ['road-local',               'line-color',       '#0b1020'],
+    ['road-pedestrian',          'line-color',       '#0d1220'],
+    ['road-minor',               'line-color',       '#0b1020'],
+    // ── 도로 케이싱 ──
+    ['road-motorway-trunk-case', 'line-color',       '#0a1028'],
+    ['road-primary-case',        'line-color',       '#0a1028'],
+    // ── 건물 ──
+    ['building',                 'fill-color',       '#0d1220'],
+    ['building-outline',         'line-color',       '#111828'],
+    // ── 공항·기차역 ──
+    ['aeroway-polygon',          'fill-color',       '#0b0f1a'],
+    ['aeroway-line',             'line-color',       '#131c2e'],
+    // ── 터널 ──
+    ['tunnel-motorway-trunk',    'line-color',       '#0d1528'],
+    ['tunnel-primary',           'line-color',       '#0c1325'],
+  ];
+
+  for (const [id, prop, color] of pairs) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    try { map.setPaintProperty(id, prop as any, color); } catch { /* 레이어 없으면 skip */ }
+  }
+}
+
+// ── 핀 HTML ────────────────────────────────────────────────────────────
 function buildClusterHTML(cluster: Cluster): string {
   const total = cluster.male + cluster.female;
   const occ   = getOccupancyColor(total, cluster.count * 20);
-
   return `<div style="
-    position:relative; text-align:center; cursor:pointer; user-select:none;
+    position:relative;text-align:center;cursor:pointer;user-select:none;
     font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
     <div style="
       background:rgba(10,10,22,0.92);
       border:1px solid rgba(79,195,247,0.35);
-      border-radius:10px;
-      padding:10px 20px;
-      min-width:130px;
+      border-radius:10px;padding:10px 20px;min-width:130px;
       backdrop-filter:blur(12px);
-      box-shadow:0 0 24px rgba(79,195,247,0.12), 0 8px 32px rgba(0,0,0,0.6);
-    ">
+      box-shadow:0 0 24px rgba(79,195,247,0.12),0 8px 32px rgba(0,0,0,0.6);">
       <div style="font-size:12px;font-weight:700;color:rgba(255,255,255,0.92);
         white-space:nowrap;letter-spacing:0.3px;margin-bottom:6px;">
         📍 ${cluster.label} 혼술바
@@ -153,8 +185,7 @@ function buildClusterHTML(cluster: Cluster): string {
     </div>
     <div style="display:flex;justify-content:center;margin-top:-1px;">
       <div style="width:0;height:0;
-        border-left:8px solid transparent;
-        border-right:8px solid transparent;
+        border-left:8px solid transparent;border-right:8px solid transparent;
         border-top:10px solid rgba(79,195,247,0.35);">
       </div>
     </div>
@@ -164,27 +195,18 @@ function buildClusterHTML(cluster: Cluster): string {
 function buildPinHTML(bar: BarWithStats, isSelected: boolean): string {
   const { male, female } = bar.stats;
   const occ = getOccupancyColor(male + female, bar.capacity);
-  const pinColor = isSelected ? '#fbbf24' : '#4fc3f7';
-  const borderColor = isSelected
-    ? 'rgba(251,191,36,0.5)'
-    : 'rgba(79,195,247,0.35)';
-  const glowColor = isSelected
-    ? 'rgba(251,191,36,0.2)'
-    : 'rgba(79,195,247,0.12)';
-
+  const pinColor    = isSelected ? '#fbbf24' : '#4fc3f7';
+  const borderColor = isSelected ? 'rgba(251,191,36,0.5)' : 'rgba(79,195,247,0.35)';
+  const glowColor   = isSelected ? 'rgba(251,191,36,0.2)' : 'rgba(79,195,247,0.12)';
   return `<div style="
-    position:relative; text-align:center; cursor:pointer; user-select:none;
+    position:relative;text-align:center;cursor:pointer;user-select:none;
     font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
     <div style="
       background:rgba(10,10,22,0.92);
-      border:1px solid ${borderColor};
-      border-radius:8px;
-      padding:6px 14px;
-      margin-bottom:4px;
-      min-width:90px;
+      border:1px solid ${borderColor};border-radius:8px;
+      padding:6px 14px;margin-bottom:4px;min-width:90px;
       backdrop-filter:blur(12px);
-      box-shadow:0 0 20px ${glowColor}, 0 4px 20px rgba(0,0,0,0.5);
-    ">
+      box-shadow:0 0 20px ${glowColor},0 4px 20px rgba(0,0,0,0.5);">
       <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.92);
         white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;
         letter-spacing:0.2px;margin-bottom:4px;">
@@ -232,11 +254,11 @@ export default function MapClient({ bars, onBarClick, selectedBarId }: Props) {
       style: 'mapbox://styles/mapbox/dark-v11',
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       projection: 'globe' as any,   // 지구본 프로젝션
-      center: [126.0, 30.0],        // 시작: 한반도 남쪽 우주 공간
-      zoom: 2,
+      center: [126.0, 30.0],        // 시작: 한반도 남쪽 우주
+      zoom: 2,                      // minZoom 없이 시작해야 지구본이 보임
       pitch: 0,
       bearing: 10,
-      minZoom: 10,
+      // minZoom은 인트로 종료 후 setMinZoom(10)으로 설정
       maxZoom: 18,
       attributionControl: false,
     });
@@ -247,21 +269,22 @@ export default function MapClient({ bars, onBarClick, selectedBarId }: Props) {
     );
 
     map.on('load', () => {
-      // ── 우주 분위기 (대기권 + 별) ──
+      // ── 우주 대기권 + 별 ──
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (map as any).setFog({
-        color:          'rgba(120, 160, 210, 0.4)',
-        'high-color':   'rgba(20, 60, 180, 0.9)',
-        'horizon-blend': 0.04,
-        'space-color':  '#08081a',
+        color:            'rgba(120, 160, 210, 0.4)',
+        'high-color':     'rgba(20, 60, 180, 0.9)',
+        'horizon-blend':  0.04,
+        'space-color':    '#08081a',
         'star-intensity': 0.85,
       });
 
-      // ── 한국어 레이블 ──
+      // ── 한국어 레이블 + 타일 색상 ──
       setKorean(map);
-      map.on('styledata', () => setKorean(map));
+      setTileColors(map);
+      map.on('styledata', () => { setKorean(map); setTileColors(map); });
 
-      // ── 3D 빌딩 레이어 ──
+      // ── 3D 빌딩 ──
       map.addLayer({
         id: '3d-buildings',
         source: 'composite',
@@ -276,34 +299,9 @@ export default function MapClient({ bars, onBarClick, selectedBarId }: Props) {
             40,  '#1e3a5f',
             150, '#1e40af',
           ],
-          'fill-extrusion-height': ['interpolate', ['linear'], ['zoom'], 14, 0, 14.05, ['get', 'height']],
-          'fill-extrusion-base':   ['interpolate', ['linear'], ['zoom'], 14, 0, 14.05, ['get', 'min_height']],
+          'fill-extrusion-height':  ['interpolate', ['linear'], ['zoom'], 14, 0, 14.05, ['get', 'height']],
+          'fill-extrusion-base':    ['interpolate', ['linear'], ['zoom'], 14, 0, 14.05, ['get', 'min_height']],
           'fill-extrusion-opacity': 0.8,
-        },
-      });
-
-      // ── 빈 서클 소스 + 레이어 ──
-      map.addSource('circles', {
-        type: 'geojson',
-        data: { type: 'FeatureCollection', features: [] },
-      });
-      map.addLayer({
-        id: 'circle-fill',
-        type: 'fill',
-        source: 'circles',
-        paint: {
-          'fill-color':   ['get', 'color'],
-          'fill-opacity': ['get', 'fillOpacity'],
-        },
-      });
-      map.addLayer({
-        id: 'circle-line',
-        type: 'line',
-        source: 'circles',
-        paint: {
-          'line-color':   ['get', 'color'],
-          'line-width':   1,
-          'line-opacity': ['get', 'strokeOpacity'],
         },
       });
 
@@ -316,12 +314,16 @@ export default function MapClient({ bars, onBarClick, selectedBarId }: Props) {
           pitch:    45,
           bearing:  -10,
           duration: 5500,
-          curve:    1.8,          // 한번 올라갔다 내려오는 곡선
+          curve:    1.8,
           essential: true,
         });
-      }, 800);
+      }, 1200);
 
-      map.once('moveend', () => setMapReady(true));
+      // flyTo 끝나면 minZoom 잠금 + 인트로 종료
+      map.once('moveend', () => {
+        map.setMinZoom(10);
+        setMapReady(true);
+      });
     });
 
     map.on('zoom', () => setZoom(map.getZoom()));
@@ -330,7 +332,7 @@ export default function MapClient({ bars, onBarClick, selectedBarId }: Props) {
     return () => { map.remove(); mapRef.current = null; };
   }, []);
 
-  // ── 마커 & 서클 업데이트 ──
+  // ── 마커 업데이트 ──
   useEffect(() => {
     if (!mapReady || !mapRef.current) return;
     const map = mapRef.current;
@@ -339,28 +341,14 @@ export default function MapClient({ bars, onBarClick, selectedBarId }: Props) {
     markersRef.current.forEach(m => m.remove());
     markersRef.current = [];
 
-    const features: GeoJSON.Feature[] = [];
-
     if (isClustered) {
       const gs = zoom < 11 ? 0.06 : 0.028;
       computeClusters(bars, gs).forEach(cluster => {
-        const total = cluster.male + cluster.female;
-        const occ   = getOccupancyColor(total, cluster.count * 20);
-        const radius = Math.min(2200, 900 + cluster.count * 260);
-
-        features.push(
-          { type: 'Feature', geometry: createGeoJSONCircle(cluster.lat, cluster.lng, radius),
-            properties: { color: occ.color, fillOpacity: 0.06, strokeOpacity: 0.35 } },
-          { type: 'Feature', geometry: createGeoJSONCircle(cluster.lat, cluster.lng, radius * 0.5),
-            properties: { color: occ.color, fillOpacity: 0.10, strokeOpacity: 0.22 } },
-        );
-
         const el = document.createElement('div');
         el.innerHTML = buildClusterHTML(cluster);
         el.addEventListener('click', () =>
           map.flyTo({ center: [cluster.lng, cluster.lat], zoom: 13, pitch: 45, duration: 700 }),
         );
-
         markersRef.current.push(
           new mapboxgl.Marker({ element: el, anchor: 'bottom' })
             .setLngLat([cluster.lng, cluster.lat])
@@ -369,15 +357,6 @@ export default function MapClient({ bars, onBarClick, selectedBarId }: Props) {
       });
     } else {
       bars.forEach(bar => {
-        const occ = getOccupancyColor(bar.stats.male + bar.stats.female, bar.capacity);
-
-        features.push(
-          { type: 'Feature', geometry: createGeoJSONCircle(bar.lat, bar.lng, 330),
-            properties: { color: occ.color, fillOpacity: 0.08, strokeOpacity: 0.35 } },
-          { type: 'Feature', geometry: createGeoJSONCircle(bar.lat, bar.lng, 140),
-            properties: { color: occ.color, fillOpacity: 0.13, strokeOpacity: 0.22 } },
-        );
-
         const isSelected = bar.id === selectedBarId;
         const el = document.createElement('div');
         el.innerHTML = buildPinHTML(bar, isSelected);
@@ -385,7 +364,6 @@ export default function MapClient({ bars, onBarClick, selectedBarId }: Props) {
         el.style.transition = 'transform 0.15s';
         el.addEventListener('mouseenter', () => { el.style.transform = 'scale(1.06)'; });
         el.addEventListener('mouseleave', () => { el.style.transform = 'scale(1)'; });
-
         markersRef.current.push(
           new mapboxgl.Marker({ element: el, anchor: 'bottom' })
             .setLngLat([bar.lng, bar.lat])
@@ -393,10 +371,6 @@ export default function MapClient({ bars, onBarClick, selectedBarId }: Props) {
         );
       });
     }
-
-    (map.getSource('circles') as mapboxgl.GeoJSONSource).setData({
-      type: 'FeatureCollection', features,
-    });
   }, [bars, selectedBarId, onBarClick, mapReady, zoom]);
 
   const isClustered = zoom < CLUSTER_ZOOM;
@@ -423,15 +397,17 @@ export default function MapClient({ bars, onBarClick, selectedBarId }: Props) {
         </div>
       )}
 
-      {/* 인트로 오버레이 (지구본 애니메이션 중) */}
+      {/* 인트로 오버레이 */}
       {!mapReady && (
         <div
           className="absolute inset-0 z-[400] flex flex-col items-center justify-end pb-16 pointer-events-none"
           style={{ background: 'linear-gradient(to top, rgba(8,8,26,0.85) 0%, transparent 50%)' }}
         >
           <div className="flex items-center gap-3">
-            <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#4fc3f7' }} />
-            <span className="text-sm font-medium" style={{ color: 'rgba(255,255,255,0.7)', letterSpacing: '0.5px' }}>
+            <div className="w-2 h-2 rounded-full animate-pulse"
+              style={{ background: '#4fc3f7', boxShadow: '0 0 8px #4fc3f7' }} />
+            <span className="text-sm font-medium"
+              style={{ color: 'rgba(255,255,255,0.7)', letterSpacing: '0.5px' }}>
               {introText}
             </span>
           </div>
