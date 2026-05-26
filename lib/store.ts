@@ -11,6 +11,7 @@ export interface Bar {
   owner_name: string;
   open_hours: string;
   tags: string[];
+  instagram?: string;
   created_at: string;
 }
 

@@ -19,6 +19,7 @@ interface BarWithStats {
   ownerName: string;
   openHours: string;
   tags: string[];
+  instagram?: string;
   stats: { male: number; female: number };
 }
 

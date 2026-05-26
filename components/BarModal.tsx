@@ -14,6 +14,7 @@ interface BarWithStats {
   ownerName: string;
   openHours: string;
   tags: string[];
+  instagram?: string;
   stats: { male: number; female: number };
 }
 
@@ -333,6 +334,30 @@ export default function BarModal({ bar, onClose, activeCheckin, onCheckin, onChe
                     <span>{icon}</span><span>{text}</span>
                   </div>
                 ))}
+
+                {/* 인스타그램 */}
+                {bar.instagram && (
+                  <a
+                    href={`https://instagram.com/${bar.instagram}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-sm transition-opacity hover:opacity-75"
+                    style={{ color: C.textMuted, textDecoration: 'none' }}
+                  >
+                    <span>📸</span>
+                    <span
+                      className="font-semibold"
+                      style={{
+                        background: 'linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                      }}
+                    >
+                      @{bar.instagram}
+                    </span>
+                    <span className="text-xs" style={{ color: C.borderLight, WebkitTextFillColor: C.borderLight }}>↗</span>
+                  </a>
+                )}
               </div>
 
               <Divider />
