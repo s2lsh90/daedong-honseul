@@ -206,74 +206,125 @@ function getChainColor(name: string): string {
   return CHAIN_PALETTE[strHash(getChainName(name)) % CHAIN_PALETTE.length];
 }
 
-// ── 3D 글라스 SVG ─────────────────────────────────────────────────────
+// ── 아이소메트릭 3D 글라스 SVG ────────────────────────────────────────
+// anchor='bottom' → SVG 바닥(그림자)이 지도 좌표에 닿아 건물처럼 서 있음
 function beerMugSVG(accent: string, selected: boolean): string {
-  const rim = selected ? '#fbbf24' : accent;
-  return `<svg width="42" height="50" viewBox="0 0 42 50" xmlns="http://www.w3.org/2000/svg">
+  const h = accent.slice(1);
+  const sel = selected;
+  return `<svg width="54" height="74" viewBox="0 0 54 74" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="bg${accent.slice(1)}" x1="0%" y1="0%" x2="100%" y2="0%">
+    <linearGradient id="bF${h}" x1="0" y1="0" x2="1" y2="0">
       <stop offset="0%" stop-color="#92400e"/>
-      <stop offset="35%" stop-color="#d97706"/>
-      <stop offset="65%" stop-color="#fbbf24"/>
-      <stop offset="100%" stop-color="#78350f"/>
+      <stop offset="48%" stop-color="#d97706"/>
+      <stop offset="100%" stop-color="#a16207"/>
     </linearGradient>
-    <linearGradient id="foam${accent.slice(1)}" x1="0%" y1="0%" x2="0%" y2="100%">
+    <radialGradient id="bFo${h}" cx="38%" cy="38%" r="60%">
       <stop offset="0%" stop-color="#fff"/>
-      <stop offset="100%" stop-color="#e2e8f0"/>
-    </linearGradient>
+      <stop offset="100%" stop-color="#cbd5e1"/>
+    </radialGradient>
   </defs>
-  <ellipse cx="18" cy="48" rx="10" ry="2.5" fill="rgba(0,0,0,0.35)"/>
-  <rect x="3" y="18" width="27" height="27" rx="4" fill="url(#bg${accent.slice(1)})" stroke="${rim}" stroke-width="${selected?1.5:0.5}"/>
-  <path d="M30 22 C41 22 41 38 30 38" fill="none" stroke="#92400e" stroke-width="6" stroke-linecap="round"/>
-  <path d="M30 22 C38 22 38 38 30 38" fill="none" stroke="#f59e0b" stroke-width="3" stroke-linecap="round"/>
-  <ellipse cx="16.5" cy="18" rx="13.5" ry="6" fill="url(#foam${accent.slice(1)})"/>
-  <circle cx="10" cy="16" r="4" fill="white"/>
-  <circle cx="19" cy="14.5" r="3.5" fill="white"/>
-  <circle cx="26" cy="16.5" r="2.5" fill="white"/>
-  <rect x="7" y="22" width="3.5" height="17" rx="1.7" fill="white" opacity="0.22"/>
-  ${selected ? `<ellipse cx="16.5" cy="18" rx="13.5" ry="6" fill="none" stroke="#fbbf24" stroke-width="1.2" opacity="0.7"/>` : ''}
+  <!-- 지면 그림자 (지도 표면) -->
+  <ellipse cx="21" cy="71" rx="20" ry="5" fill="rgba(0,0,0,0.55)"/>
+  <!-- 오른쪽 측면 (깊이감) -->
+  <path d="M36 24 L43 18 L43 63 L36 68 Z" fill="#3b1200" opacity="0.92"/>
+  <!-- 앞면 몸통 -->
+  <rect x="4" y="24" width="32" height="44" rx="2" fill="url(#bF${h})"/>
+  ${sel ? `<rect x="4" y="24" width="32" height="44" rx="2" fill="none" stroke="#fbbf24" stroke-width="1.8" opacity="0.8"/>` : ''}
+  <!-- 손잡이 뒷부분 (그림자) -->
+  <path d="M36 32 C51 32 51 54 36 54" fill="none" stroke="#2d0d00" stroke-width="9" stroke-linecap="round"/>
+  <!-- 손잡이 앞부분 -->
+  <path d="M36 32 C47 32 47 54 36 54" fill="none" stroke="#b45309" stroke-width="5" stroke-linecap="round"/>
+  <!-- 위 뚜껑 뒷부분 (깊이) -->
+  <ellipse cx="20" cy="24" rx="16" ry="6.5" fill="#2d0d00"/>
+  <!-- 거품 윗면 (위에서 본 시점) -->
+  <ellipse cx="20" cy="22" rx="16" ry="6.5" fill="url(#bFo${h})"/>
+  <!-- 거품 방울들 -->
+  <circle cx="11" cy="20" r="5.5" fill="white"/>
+  <circle cx="20" cy="17.5" r="6" fill="white"/>
+  <circle cx="28" cy="20" r="5" fill="white"/>
+  <circle cx="15" cy="19" r="3.5" fill="white" opacity="0.9"/>
+  <circle cx="25" cy="19" r="3.5" fill="white" opacity="0.9"/>
+  <!-- 림 하이라이트 -->
+  <ellipse cx="20" cy="22" rx="16" ry="6.5" fill="none"
+    stroke="${sel ? '#fbbf24' : 'rgba(255,255,255,0.5)'}" stroke-width="${sel ? 1.5 : 1}"/>
+  <!-- 몸통 빛 반사 -->
+  <rect x="8" y="30" width="4" height="32" rx="2" fill="rgba(255,255,255,0.2)"/>
 </svg>`;
 }
 
 function whiskeyGlassSVG(accent: string, selected: boolean): string {
-  const rim = selected ? '#fbbf24' : accent;
-  return `<svg width="36" height="48" viewBox="0 0 36 48" xmlns="http://www.w3.org/2000/svg">
+  const h = accent.slice(1);
+  const sel = selected;
+  return `<svg width="50" height="68" viewBox="0 0 50 68" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="wh${accent.slice(1)}" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#92400e" stop-opacity="0.85"/>
-      <stop offset="40%" stop-color="#b45309"/>
-      <stop offset="70%" stop-color="#d97706"/>
-      <stop offset="100%" stop-color="#78350f" stop-opacity="0.85"/>
+    <linearGradient id="wF${h}" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#78350f"/>
+      <stop offset="48%" stop-color="#c2410c"/>
+      <stop offset="100%" stop-color="#92400e"/>
     </linearGradient>
   </defs>
-  <ellipse cx="18" cy="46" rx="10" ry="2.5" fill="rgba(0,0,0,0.35)"/>
-  <path d="M5 9 L3 43 L33 43 L31 9 Z" fill="rgba(255,255,255,0.07)" stroke="${rim}" stroke-width="${selected?1.5:1}" stroke-linejoin="round"/>
-  <path d="M6.5 18 L5 42 L31 42 L29.5 18 Z" fill="url(#wh${accent.slice(1)})"/>
-  <rect x="12" y="24" width="11" height="10" rx="2" fill="rgba(196,232,255,0.72)" stroke="rgba(255,255,255,0.5)" stroke-width="0.5"/>
-  <path d="M9 11 L7.5 39" stroke="rgba(255,255,255,0.28)" stroke-width="2.5" stroke-linecap="round"/>
-  <line x1="5" y1="9" x2="31" y2="9" stroke="rgba(255,255,255,0.35)" stroke-width="1.5"/>
-  ${selected ? `<path d="M5 9 L3 43 L33 43 L31 9 Z" fill="none" stroke="#fbbf24" stroke-width="1.2" opacity="0.6"/>` : ''}
+  <!-- 지면 그림자 -->
+  <ellipse cx="21" cy="65" rx="18" ry="4.5" fill="rgba(0,0,0,0.55)"/>
+  <!-- 오른쪽 측면 (사다리꼴 - 위가 약간 넓음) -->
+  <path d="M35 22 L42 17 L40 61 L33 65 Z" fill="#2c0d00" opacity="0.92"/>
+  <!-- 앞면 몸통 (사다리꼴) -->
+  <path d="M4 22 L6 65 L33 65 L35 22 Z" fill="url(#wF${h})"/>
+  ${sel ? `<path d="M4 22 L6 65 L33 65 L35 22 Z" fill="none" stroke="#fbbf24" stroke-width="1.8" opacity="0.8"/>` : ''}
+  <!-- 액체 위 (호박색, 위에서 본 시점) -->
+  <ellipse cx="20" cy="22" rx="16" ry="6" fill="#7c2d12"/>
+  <ellipse cx="20" cy="21" rx="14" ry="5" fill="#d97706"/>
+  <!-- 얼음 위에서 본 모습 -->
+  <rect x="12" y="16.5" width="12" height="9" rx="2" fill="rgba(186,230,255,0.88)"
+    stroke="rgba(255,255,255,0.7)" stroke-width="0.8"/>
+  <!-- 얼음 반짝임 -->
+  <line x1="13" y1="18" x2="16" y2="21" stroke="white" stroke-width="1" opacity="0.6"/>
+  <!-- 컵 테두리 (두께감) -->
+  <ellipse cx="20" cy="22" rx="16" ry="6" fill="none"
+    stroke="${sel ? '#fbbf24' : 'rgba(255,255,255,0.45)'}" stroke-width="${sel ? 1.5 : 1}"/>
+  <ellipse cx="20" cy="22" rx="16" ry="6" fill="none" stroke="rgba(44,13,0,0.95)" stroke-width="2.5"/>
+  <!-- 몸통 빛 반사 -->
+  <path d="M9 26 L10 59" stroke="rgba(255,255,255,0.22)" stroke-width="4" stroke-linecap="round"/>
 </svg>`;
 }
 
 function wineGlassSVG(accent: string, selected: boolean): string {
-  const rim = selected ? '#fbbf24' : accent;
-  return `<svg width="32" height="54" viewBox="0 0 32 54" xmlns="http://www.w3.org/2000/svg">
+  const h = accent.slice(1);
+  const sel = selected;
+  return `<svg width="46" height="82" viewBox="0 0 46 82" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="wine${accent.slice(1)}" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#6b21a8" stop-opacity="0.85"/>
-      <stop offset="50%" stop-color="#9333ea"/>
-      <stop offset="100%" stop-color="#581c87" stop-opacity="0.85"/>
+    <linearGradient id="wnF${h}" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#4c1d95"/>
+      <stop offset="50%" stop-color="#7c3aed"/>
+      <stop offset="100%" stop-color="#5b21b6"/>
     </linearGradient>
   </defs>
-  <ellipse cx="16" cy="52" rx="9" ry="2.5" fill="rgba(0,0,0,0.35)"/>
-  <rect x="14" y="36" width="4" height="14" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
-  <ellipse cx="16" cy="50" rx="8" ry="2.5" fill="rgba(255,255,255,0.12)" stroke="rgba(255,255,255,0.2)" stroke-width="0.8"/>
-  <path d="M3 5 C3 5, 1 24, 8 32 C11 37, 21 37, 24 32 C31 24, 29 5, 29 5 Z"
-    fill="rgba(255,255,255,0.07)" stroke="${rim}" stroke-width="${selected?1.5:1}" stroke-linejoin="round"/>
-  <path d="M4 14 C4 14, 2 26, 9 32 C12 37, 20 37, 23 32 C30 26, 28 14, 28 14 Z" fill="url(#wine${accent.slice(1)})"/>
-  <path d="M7 7 C7 17, 6 25, 9 30" stroke="rgba(255,255,255,0.28)" stroke-width="2" fill="none" stroke-linecap="round"/>
-  ${selected ? `<path d="M3 5 C3 5, 1 24, 8 32 C11 37, 21 37, 24 32 C31 24, 29 5, 29 5 Z" fill="none" stroke="#fbbf24" stroke-width="1.2" opacity="0.6"/>` : ''}
+  <!-- 지면 그림자 -->
+  <ellipse cx="21" cy="79" rx="15" ry="4" fill="rgba(0,0,0,0.55)"/>
+  <!-- 받침 오른쪽 면 -->
+  <path d="M30 69 L35 64 L35 69 L30 74 Z" fill="#1e0a47" opacity="0.9"/>
+  <!-- 받침 앞면 -->
+  <rect x="13" y="69" width="17" height="5" rx="2.5" fill="#4c1d95"
+    stroke="${sel ? '#fbbf24' : accent + '44'}" stroke-width="${sel ? 1.5 : 0.5}"/>
+  <!-- 스템 오른쪽 면 -->
+  <path d="M23 46 L27 42 L27 64 L23 69 Z" fill="#1e0a47" opacity="0.85"/>
+  <!-- 스템 앞면 -->
+  <rect x="20" y="46" width="5" height="23" fill="#3b0f8c"/>
+  <!-- 볼 오른쪽 면 -->
+  <path d="M37 12 L41 8 L38 44 L32 46 Z" fill="#1e0a47" opacity="0.85"/>
+  <!-- 볼 앞면 (와인 채워진 부분) -->
+  <path d="M4 10 C3 30 8 46 21 46 C34 46 41 30 40 10 Z" fill="url(#wnF${h})"/>
+  ${sel ? `<path d="M4 10 C3 30 8 46 21 46 C34 46 41 30 40 10 Z" fill="none" stroke="#fbbf24" stroke-width="1.8" opacity="0.8"/>` : ''}
+  <!-- 와인 표면 위에서 본 타원 -->
+  <ellipse cx="22" cy="10" rx="18" ry="7" fill="#3b0f8c"/>
+  <ellipse cx="22" cy="9" rx="16" ry="6" fill="#7c3aed"/>
+  <!-- 와인 표면 하이라이트 -->
+  <ellipse cx="18" cy="8" rx="7.5" ry="2.5" fill="#a78bfa" opacity="0.55"/>
+  <!-- 림 테두리 (두께감) -->
+  <ellipse cx="22" cy="10" rx="18" ry="7" fill="none"
+    stroke="${sel ? '#fbbf24' : 'rgba(255,255,255,0.45)'}" stroke-width="${sel ? 1.5 : 1}"/>
+  <ellipse cx="22" cy="10" rx="18" ry="7" fill="none" stroke="rgba(20,0,60,0.95)" stroke-width="2.5"/>
+  <!-- 볼 빛 반사 -->
+  <path d="M8 15 C7 28 9 38 12 43" stroke="rgba(255,255,255,0.2)" stroke-width="3" fill="none" stroke-linecap="round"/>
 </svg>`;
 }
 
@@ -382,13 +433,26 @@ function setTransitStyle(map: mapboxgl.Map) {
     } catch { /* skip */ }
   }
 
-  // 지하철역 레이블 강화
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  try { map.setPaintProperty('transit-label', 'text-color' as any, 'rgba(255,255,255,0.82)'); } catch {}
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  try { map.setPaintProperty('transit-label', 'text-halo-color' as any, 'rgba(8,8,26,0.95)'); } catch {}
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  try { map.setPaintProperty('transit-label', 'text-halo-width' as any, 1.5); } catch {}
+  // 지하철역 레이블 강화 — 역이름 크고 선명하게
+  for (const lid of ['transit-label']) {
+    try { map.setLayoutProperty(lid, 'visibility', 'visible'); } catch {}
+    try {
+      map.setLayoutProperty(lid, 'text-field',
+        ['coalesce', ['get', 'name_ko'], ['get', 'name']] as mapboxgl.Expression);
+    } catch {}
+    try {
+      map.setLayoutProperty(lid, 'text-size',
+        ['interpolate', ['linear'], ['zoom'], 10, 11, 12, 13, 14, 15, 16, 16] as mapboxgl.Expression);
+    } catch {}
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    try { map.setPaintProperty(lid, 'text-color' as any, 'rgba(255,255,255,0.97)'); } catch {}
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    try { map.setPaintProperty(lid, 'text-halo-color' as any, 'rgba(4,4,18,0.99)'); } catch {}
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    try { map.setPaintProperty(lid, 'text-halo-width' as any, 2.8); } catch {}
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    try { map.setPaintProperty(lid, 'text-halo-blur' as any, 0); } catch {}
+  }
 }
 
 /** 레이블 정리: 동/구/시 지명만 + POI 숨김 */
@@ -449,7 +513,8 @@ function buildClusterHTML(cluster: Cluster): string {
   </div>`;
 }
 
-// ── 3D 글라스 마커 HTML ───────────────────────────────────────────────
+// ── 아이소메트릭 글라스 마커 HTML ─────────────────────────────────────
+// anchor='bottom' → div 맨 아래 = SVG 지면 그림자 = 지도 좌표 (건물처럼 서 있음)
 function buildPinHTML(bar: BarWithStats, isSelected: boolean): string {
   const { male, female } = bar.stats;
   const occ       = getOccupancyColor(male + female, bar.capacity);
@@ -457,35 +522,33 @@ function buildPinHTML(bar: BarWithStats, isSelected: boolean): string {
   const accent    = getChainColor(bar.name);
   const glassSVG  = buildGlassSVG(glassType, accent, isSelected);
   const shortName = bar.name.length > 9 ? bar.name.slice(0, 8) + '…' : bar.name;
-  const borderColor = isSelected ? 'rgba(251,191,36,0.5)' : `${accent}55`;
-  const glowColor   = isSelected ? 'rgba(251,191,36,0.2)' : `${accent}22`;
+  const labelBorder = isSelected ? 'rgba(251,191,36,0.65)' : `${accent}50`;
 
-  return `<div style="text-align:center;cursor:pointer;user-select:none;
+  // 라벨(위) → 글라스 SVG(아래) 순서로 쌓아야
+  // anchor:bottom 기준으로 SVG 바닥 그림자가 정확히 지도 좌표에 닿음
+  return `<div style="
+    display:flex;flex-direction:column;align-items:center;
+    cursor:pointer;user-select:none;
     font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
-    <!-- 3D 글라스 -->
-    <div style="display:flex;justify-content:center;margin-bottom:2px;
-      filter:drop-shadow(0 2px 8px ${glowColor}) drop-shadow(0 0 4px ${accent}66);">
-      ${glassSVG}
-    </div>
-    <!-- 정보 라벨 -->
+    <!-- 정보 라벨 (글라스 위에 떠 있는 이름표) -->
     <div style="
-      background:rgba(10,10,22,0.92);border:1px solid ${borderColor};
-      border-radius:6px;padding:3px 8px;margin-bottom:3px;
-      box-shadow:0 0 10px ${glowColor},0 2px 10px rgba(0,0,0,0.5);">
-      <div style="font-size:9px;font-weight:700;color:rgba(255,255,255,0.88);
-        white-space:nowrap;margin-bottom:2px;">${shortName}</div>
-      <div style="display:flex;gap:4px;justify-content:center;align-items:center;">
-        <span style="font-size:8px;color:#90cdf4;font-weight:600;">♂${male}</span>
+      background:rgba(6,6,20,0.92);
+      border:1px solid ${labelBorder};
+      border-radius:5px;padding:3px 8px 2px;
+      margin-bottom:1px;
+      box-shadow:0 2px 8px rgba(0,0,0,0.65);
+      white-space:nowrap;">
+      <div style="font-size:9px;font-weight:700;color:rgba(255,255,255,0.92);
+        letter-spacing:0.1px;margin-bottom:1px;">${shortName}</div>
+      <div style="display:flex;gap:5px;justify-content:center;align-items:center;">
+        <span style="font-size:8px;color:#93c5fd;font-weight:600;">♂${male}</span>
         <span style="font-size:8px;color:#f9a8d4;font-weight:600;">♀${female}</span>
         <span style="display:inline-block;width:5px;height:5px;border-radius:50%;
-          background:${occ.color};box-shadow:0 0 4px ${occ.color}99;flex-shrink:0;"></span>
+          background:${occ.color};box-shadow:0 0 4px ${occ.color};flex-shrink:0;"></span>
       </div>
     </div>
-    <!-- 위치 점 -->
-    <div style="display:flex;justify-content:center;">
-      <div style="width:6px;height:6px;border-radius:50%;
-        background:${accent};box-shadow:0 0 6px ${accent};margin:0 auto;"></div>
-    </div>
+    <!-- 아이소메트릭 글라스 (SVG 바닥 그림자가 지도 지면) -->
+    ${glassSVG}
   </div>`;
 }
 
