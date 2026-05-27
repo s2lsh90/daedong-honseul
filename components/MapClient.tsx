@@ -242,112 +242,90 @@ function getChainColor(name: string): string {
 }
 
 // ── 아이소메트릭 3D 글라스 SVG ─────────────────────────────────────────
-// 크기: 기존 대비 ~55% 축소 / 색상: 지도 다크 네이비 톤으로 통일
-// 앞면(#0a1428) + 오른쪽면(#030608) + 윗면(accent색) → 지도에 자연스럽게 녹아듦
-// anchor='bottom' → SVG 맨 아래 그림자 = 지도 좌표 지면
+// 크기: beer 30×42, whiskey 28×40, wine 24×46
+// 앞면 #1a2e50(밝은 네이비) + 오른쪽면 #0b1a30(어두운 면) + 윗면 accent
 function beerMugSVG(accent: string, selected: boolean): string {
-  const h = accent.slice(1);
   const sel = selected;
-  // isometric offset: dx=+7, dy=-5
-  // 앞면: x=2..25, y=16..44 (23×28)
-  // 오른쪽면: M25,16 L32,11 L32,39 L25,44
-  // 윗면: M2,16 L25,16 L32,11 L9,11
-  return `<svg width="38" height="54" viewBox="0 0 38 54" xmlns="http://www.w3.org/2000/svg">
+  // isometric dx=+5, dy=-4 / 앞면 x=2..21, y=13..34 (19×21)
+  return `<svg width="30" height="42" viewBox="0 0 30 42" xmlns="http://www.w3.org/2000/svg">
   <!-- 지면 그림자 -->
-  <ellipse cx="16" cy="52" rx="15" ry="3" fill="rgba(0,0,0,0.45)"/>
-  <!-- ① 오른쪽면 (거의 검정) -->
-  <path d="M25 16 L32 11 L32 39 L25 44 Z" fill="#03060e"/>
-  <!-- ② 앞면 (지도 다크 네이비) -->
-  <rect x="2" y="16" width="23" height="28" fill="#0a1428"/>
-  <!-- accent 세로 반사선 (왼쪽 가장자리) -->
-  <rect x="2" y="16" width="2.5" height="28" rx="1" fill="${accent}" opacity="0.4"/>
-  ${sel ? `<rect x="2" y="16" width="23" height="28" fill="none" stroke="#fbbf24" stroke-width="1.5"/>` : ''}
-  <!-- 손잡이 외곽(검정) + 측면(네이비) + accent 하이라이트 -->
-  <path d="M25 21 C36 21 36 37 25 37" fill="none" stroke="#030608" stroke-width="7" stroke-linecap="round"/>
-  <path d="M25 21 C34 21 34 37 25 37" fill="none" stroke="#0a1428" stroke-width="4.5" stroke-linecap="round"/>
-  <path d="M25 21 C32 22 32 36 25 37" fill="none" stroke="${accent}" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
-  <!-- ③ 윗면 배경 (어두운 기저) -->
-  <path d="M2 16 L25 16 L32 11 L9 11 Z" fill="#050c1a"/>
-  <!-- 거품 표면 (흰색 — 위에서 내려다봄) -->
-  <path d="M2 15 L25 15 L32 10 L9 10 Z" fill="rgba(255,255,255,0.82)"/>
-  <ellipse cx="14" cy="13" rx="7"   ry="2.5" fill="white"/>
-  <ellipse cx="22" cy="12" rx="4.5" ry="1.8" fill="white" opacity="0.9"/>
-  <ellipse cx="8"  cy="13.5" rx="3" ry="1.3" fill="white" opacity="0.85"/>
-  <!-- 림 accent 테두리 -->
-  <path d="M2 15 L25 15 L32 10 L9 10 Z" fill="none"
-    stroke="${sel ? '#fbbf24' : accent}" stroke-width="0.9" opacity="${sel ? 1 : 0.65}"/>
+  <ellipse cx="13" cy="40" rx="12" ry="2.5" fill="rgba(0,0,0,0.4)"/>
+  <!-- ① 오른쪽면 -->
+  <path d="M21 13 L26 9 L26 30 L21 34 Z" fill="#0b1a30"/>
+  <!-- ② 앞면 (밝은 네이비) -->
+  <rect x="2" y="13" width="19" height="21" fill="#1a2e50"/>
+  <rect x="2" y="13" width="2" height="21" rx="1" fill="${accent}" opacity="0.6"/>
+  ${sel ? `<rect x="2" y="13" width="19" height="21" fill="none" stroke="#fbbf24" stroke-width="1.5"/>` : ''}
+  <!-- 손잡이 -->
+  <path d="M21 17 C29 17 29 28 21 28" fill="none" stroke="#060f1c" stroke-width="6" stroke-linecap="round"/>
+  <path d="M21 17 C27 17 27 28 21 28" fill="none" stroke="#1a2e50" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M21 17 C26 18 26 27 21 28" fill="none" stroke="${accent}" stroke-width="1.2" stroke-linecap="round" opacity="0.65"/>
+  <!-- ③ 윗면 기저 -->
+  <path d="M2 13 L21 13 L26 9 L7 9 Z" fill="#0d1e38"/>
+  <!-- 거품 (흰색) -->
+  <path d="M2 12 L21 12 L26 8 L7 8 Z" fill="rgba(255,255,255,0.92)"/>
+  <ellipse cx="13" cy="10.5" rx="6"   ry="2.2" fill="white"/>
+  <ellipse cx="20" cy="10"   rx="3.5" ry="1.5" fill="white" opacity="0.9"/>
+  <ellipse cx="7"  cy="10.5" rx="2.5" ry="1.2" fill="white" opacity="0.85"/>
+  <path d="M2 12 L21 12 L26 8 L7 8 Z" fill="none"
+    stroke="${sel ? '#fbbf24' : accent}" stroke-width="0.9" opacity="${sel ? 1 : 0.7}"/>
 </svg>`;
 }
 
 function whiskeyGlassSVG(accent: string, selected: boolean): string {
-  const h = accent.slice(1);
   const sel = selected;
-  // 온더록스: 앞면(4,14)→(26,14)→(24,44)→(6,44) 22×30
-  // 오른쪽: M26,14 L33,9 L31,39 L24,44  offset +7,-5
-  // 윗면: M4,14 L26,14 L33,9 L11,9
-  return `<svg width="38" height="52" viewBox="0 0 38 52" xmlns="http://www.w3.org/2000/svg">
-  <!-- 지면 그림자 -->
-  <ellipse cx="17" cy="50" rx="15" ry="3" fill="rgba(0,0,0,0.45)"/>
-  <!-- ① 오른쪽면 (거의 검정) -->
-  <path d="M26 14 L33 9 L31 39 L24 44 Z" fill="#03060e"/>
-  <!-- ② 앞면 (지도 네이비) -->
-  <path d="M4 14 L6 44 L24 44 L26 14 Z" fill="#0a1428"/>
-  <!-- accent 세로 반사선 -->
-  <path d="M4 14 L4.5 44 L7.5 44 L7 14 Z" fill="${accent}" opacity="0.4" rx="1"/>
-  ${sel ? `<path d="M4 14 L6 44 L24 44 L26 14 Z" fill="none" stroke="#fbbf24" stroke-width="1.5"/>` : ''}
-  <!-- ③ 윗면 배경 -->
-  <path d="M4 14 L26 14 L33 9 L11 9 Z" fill="#050c1a"/>
-  <!-- 액체 표면 (accent 컬러 — 위에서 내려다봄) -->
-  <path d="M4 13 L26 13 L33 8 L11 8 Z" fill="${accent}" opacity="0.35"/>
-  <path d="M5 12.5 L25 12.5 L32 8 L12 8 Z" fill="${accent}" opacity="0.45"/>
-  <!-- 얼음 — 아이소메트릭 3면 -->
-  <rect x="10" y="9" width="9"  height="6"  rx="0.8" fill="rgba(200,235,255,0.88)"/>
-  <path d="M19 9  L23 6  L23 11 L19 14 Z"   fill="rgba(170,215,245,0.72)"/>
-  <path d="M10 9  L19 9  L23 6  L14 6 Z"    fill="rgba(225,245,255,0.9)"/>
-  <!-- 유리 두께선 -->
-  <path d="M4 14 L26 14 L33 9 L11 9 Z" fill="none" stroke="rgba(5,10,25,0.95)" stroke-width="2"/>
-  <path d="M4 13 L26 13 L33 8 L11 8 Z" fill="none"
-    stroke="${sel ? '#fbbf24' : accent}" stroke-width="0.9" opacity="${sel ? 1 : 0.65}"/>
+  // dx=+5,dy=-4 / 앞면 M3,11 L5,33 L19,33 L21,11
+  return `<svg width="28" height="40" viewBox="0 0 28 40" xmlns="http://www.w3.org/2000/svg">
+  <ellipse cx="13" cy="38" rx="12" ry="2.5" fill="rgba(0,0,0,0.4)"/>
+  <!-- ① 오른쪽면 -->
+  <path d="M21 11 L26 7 L24 29 L19 33 Z" fill="#0b1a30"/>
+  <!-- ② 앞면 -->
+  <path d="M3 11 L5 33 L19 33 L21 11 Z" fill="#1a2e50"/>
+  <path d="M3 11 L4 33 L6 33 L5 11 Z" fill="${accent}" opacity="0.6"/>
+  ${sel ? `<path d="M3 11 L5 33 L19 33 L21 11 Z" fill="none" stroke="#fbbf24" stroke-width="1.5"/>` : ''}
+  <!-- ③ 윗면 기저 -->
+  <path d="M3 11 L21 11 L26 7 L8 7 Z" fill="#0d1e38"/>
+  <!-- 액체 (accent) -->
+  <path d="M3 10 L21 10 L26 6 L8 6 Z" fill="${accent}" opacity="0.5"/>
+  <path d="M4 9.5 L20 9.5 L25 6 L9 6 Z" fill="${accent}" opacity="0.65"/>
+  <!-- 얼음 3면 -->
+  <rect x="8" y="6.5" width="7" height="5" rx="0.7" fill="rgba(200,235,255,0.85)"/>
+  <path d="M15 6.5 L18 4.5 L18 9  L15 11 Z" fill="rgba(170,215,245,0.7)"/>
+  <path d="M8  6.5 L15 6.5 L18 4.5 L11 4.5 Z" fill="rgba(225,245,255,0.9)"/>
+  <path d="M3 11 L21 11 L26 7 L8 7 Z" fill="none" stroke="rgba(5,12,28,0.9)" stroke-width="1.8"/>
+  <path d="M3 10 L21 10 L26 6 L8 6 Z" fill="none"
+    stroke="${sel ? '#fbbf24' : accent}" stroke-width="0.9" opacity="${sel ? 1 : 0.7}"/>
 </svg>`;
 }
 
 function wineGlassSVG(accent: string, selected: boolean): string {
-  const h = accent.slice(1);
   const sel = selected;
-  // 볼(상)+스템+받침, 전체 높이 60
-  // 볼 앞면: bezier, 오른쪽면, 윗면 (와인 액체)
-  return `<svg width="36" height="62" viewBox="0 0 36 62" xmlns="http://www.w3.org/2000/svg">
-  <!-- 지면 그림자 -->
-  <ellipse cx="15" cy="60" rx="13" ry="3" fill="rgba(0,0,0,0.45)"/>
-
-  <!-- === 받침 === -->
-  <path d="M21 52 L27 48 L27 52 L21 56 Z" fill="#03060e"/>
-  <rect x="8" y="52" width="13" height="4" rx="2" fill="#0a1428"/>
-  <path d="M8 52 L21 52 L27 48 L14 48 Z" fill="#050c1a"/>
-
-  <!-- === 스템 === -->
-  <path d="M14 33 L17 30 L17 48 L14 52 Z" fill="#03060e"/>
-  <rect x="12" y="33" width="4" height="19" fill="#0a1428"/>
-
-  <!-- === 볼 === -->
-  <!-- 오른쪽면 -->
-  <path d="M25 8 L30 5 L28 31 L22 33 Z" fill="#03060e"/>
-  <!-- 앞면 (다크 네이비) -->
-  <path d="M3 6 C2 20 5 33 14 33 C23 33 27 20 26 6 Z" fill="#0a1428"/>
-  <!-- accent 세로 반사선 (볼 왼쪽) -->
-  <path d="M3 6 C2 20 5 33 7 33 C5 33 4 20 4 6 Z" fill="${accent}" opacity="0.35"/>
-  ${sel ? `<path d="M3 6 C2 20 5 33 14 33 C23 33 27 20 26 6 Z" fill="none" stroke="#fbbf24" stroke-width="1.5"/>` : ''}
-  <!-- ③ 볼 윗면 배경 -->
-  <path d="M3 6 L26 6 L30 3 L7 3 Z" fill="#050c1a"/>
-  <!-- 와인 표면 (accent 컬러 — 위에서 내려다봄) -->
-  <path d="M3 5 L26 5 L30 2 L7 2 Z" fill="${accent}" opacity="0.4"/>
-  <path d="M4 4.5 L25 4.5 L29 2 L8 2 Z" fill="${accent}" opacity="0.55"/>
-  <!-- 와인 하이라이트 -->
-  <ellipse cx="14" cy="3.5" rx="7" ry="1.5" fill="${accent}" opacity="0.3"/>
-  <!-- 유리 두께선 -->
-  <path d="M3 6 L26 6 L30 3 L7 3 Z" fill="none" stroke="rgba(3,5,15,0.95)" stroke-width="2"/>
-  <path d="M3 5 L26 5 L30 2 L7 2 Z" fill="none"
-    stroke="${sel ? '#fbbf24' : accent}" stroke-width="0.9" opacity="${sel ? 1 : 0.65}"/>
+  // 볼+스템+받침 dx=+4,dy=-3
+  return `<svg width="24" height="46" viewBox="0 0 24 46" xmlns="http://www.w3.org/2000/svg">
+  <ellipse cx="11" cy="44" rx="10" ry="2" fill="rgba(0,0,0,0.4)"/>
+  <!-- 받침 오른쪽면 -->
+  <path d="M15 38 L19 35 L19 38 L15 41 Z" fill="#0b1a30"/>
+  <rect x="5" y="38" width="10" height="3" rx="1.5" fill="#1a2e50"/>
+  <path d="M5 38 L15 38 L19 35 L9 35 Z" fill="#0d1e38"/>
+  <!-- 스템 오른쪽면 -->
+  <path d="M10 24 L12 22 L12 35 L10 38 Z" fill="#0b1a30"/>
+  <rect x="8" y="24" width="4" height="14" fill="#1a2e50"/>
+  <rect x="8" y="24" width="1.2" height="14" fill="${accent}" opacity="0.5"/>
+  <!-- 볼 오른쪽면 -->
+  <path d="M17 5 L20 3 L19 22 L15 24 Z" fill="#0b1a30"/>
+  <!-- 볼 앞면 -->
+  <path d="M2 4 C1 14 4 24 10 24 C16 24 19 14 18 4 Z" fill="#1a2e50"/>
+  <path d="M2 4 C1 14 4 24 4.5 24 C3 24 2.5 14 3 4 Z" fill="${accent}" opacity="0.5"/>
+  ${sel ? `<path d="M2 4 C1 14 4 24 10 24 C16 24 19 14 18 4 Z" fill="none" stroke="#fbbf24" stroke-width="1.5"/>` : ''}
+  <!-- 윗면 기저 -->
+  <path d="M2 4 L18 4 L21 2 L5 2 Z" fill="#0d1e38"/>
+  <!-- 와인 (accent) -->
+  <path d="M2 3 L18 3 L21 1 L5 1 Z" fill="${accent}" opacity="0.55"/>
+  <path d="M3 2.5 L17 2.5 L20 1 L6 1 Z" fill="${accent}" opacity="0.7"/>
+  <path d="M2 4 L18 4 L21 2 L5 2 Z" fill="none" stroke="rgba(5,12,28,0.9)" stroke-width="1.8"/>
+  <path d="M2 3 L18 3 L21 1 L5 1 Z" fill="none"
+    stroke="${sel ? '#fbbf24' : accent}" stroke-width="0.9" opacity="${sel ? 1 : 0.7}"/>
+  <path d="M4 7 C3 14 4 20 6 23" stroke="rgba(255,255,255,0.18)" stroke-width="1.5" fill="none" stroke-linecap="round"/>
 </svg>`;
 }
 
@@ -570,6 +548,51 @@ function buildClusterHTML(cluster: Cluster): string {
   </div>`;
 }
 
+// ── 팝업 HTML (두 번째 클릭 시 표시) ─────────────────────────────────
+function buildPopupHTML(bar: BarWithStats): string {
+  const { male, female } = bar.stats;
+  const total  = male + female;
+  const occ    = getOccupancyColor(total, bar.capacity);
+  const glass  = getGlassType(bar.name);
+  const emoji  = glass === 'beer' ? '🍺' : glass === 'whiskey' ? '🥃' : '🍷';
+  const accent = getChainColor(bar.name);
+  return `<div style="
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    min-width:190px;
+    background:rgba(5,9,22,0.97);
+    border:1px solid ${accent}45;
+    border-radius:12px;
+    padding:14px 16px 12px;
+    color:rgba(255,255,255,0.9);
+    box-shadow:0 8px 32px rgba(0,0,0,0.7),0 0 24px ${accent}18;">
+    <div style="font-size:13px;font-weight:800;margin-bottom:10px;">${emoji} ${bar.name}</div>
+    <div style="display:flex;gap:0;margin-bottom:10px;
+      background:rgba(255,255,255,0.04);border-radius:8px;overflow:hidden;">
+      <div style="flex:1;text-align:center;padding:8px 4px;">
+        <div style="font-size:22px;font-weight:800;color:#93c5fd;line-height:1;">${male}</div>
+        <div style="font-size:8px;color:rgba(255,255,255,0.35);margin-top:3px;">남성</div>
+      </div>
+      <div style="width:1px;background:rgba(255,255,255,0.06);"></div>
+      <div style="flex:1;text-align:center;padding:8px 4px;">
+        <div style="font-size:22px;font-weight:800;color:#f9a8d4;line-height:1;">${female}</div>
+        <div style="font-size:8px;color:rgba(255,255,255,0.35);margin-top:3px;">여성</div>
+      </div>
+      <div style="width:1px;background:rgba(255,255,255,0.06);"></div>
+      <div style="flex:1;text-align:center;padding:8px 4px;">
+        <div style="font-size:22px;font-weight:800;color:${occ.color};line-height:1;">${total}</div>
+        <div style="font-size:8px;color:rgba(255,255,255,0.35);margin-top:3px;">현재</div>
+      </div>
+    </div>
+    <div style="
+      background:${occ.color}16;border:1px solid ${occ.color}40;
+      border-radius:6px;padding:5px 10px;
+      font-size:10px;color:${occ.color};
+      text-align:center;font-weight:700;">
+      ${occ.label} · 정원 ${bar.capacity}명
+    </div>
+  </div>`;
+}
+
 // ── 아이소메트릭 글라스 마커 HTML ─────────────────────────────────────
 // anchor='bottom' → div 맨 아래 = SVG 지면 그림자 = 지도 좌표 (건물처럼 서 있음)
 function buildPinHTML(bar: BarWithStats, isSelected: boolean): string {
@@ -614,6 +637,7 @@ export default function MapClient({ bars, onBarClick, selectedBarId }: Props) {
   const containerRef    = useRef<HTMLDivElement>(null);
   const mapRef          = useRef<mapboxgl.Map | null>(null);
   const markersRef      = useRef<mapboxgl.Marker[]>([]);
+  const popupRef        = useRef<mapboxgl.Popup | null>(null);
   const mapReadyRef     = useRef(false);
   const introTimersRef  = useRef<ReturnType<typeof setTimeout>[]>([]);
   const zoomRef         = useRef(11);
@@ -621,6 +645,35 @@ export default function MapClient({ bars, onBarClick, selectedBarId }: Props) {
   const [isClustered,   setIsClustered]  = useState(true);
   const [mapReady,      setMapReady]     = useState(false);
   const [introText,     setIntroText]    = useState('지구를 탐색 중...');
+
+  // ── 팝업 CSS 한 번만 주입 ──────────────────────────────────────────
+  useEffect(() => {
+    const s = document.createElement('style');
+    s.textContent = `
+      .hon-popup .mapboxgl-popup-content {
+        background: transparent !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        border-radius: 12px;
+      }
+      .hon-popup .mapboxgl-popup-tip {
+        border-top-color: rgba(79,195,247,0.25) !important;
+      }
+      .hon-popup .mapboxgl-popup-close-button {
+        color: rgba(255,255,255,0.45) !important;
+        font-size: 18px !important;
+        right: 10px !important;
+        top: 8px !important;
+        background: none !important;
+      }
+      .hon-popup .mapboxgl-popup-close-button:hover {
+        color: rgba(255,255,255,0.85) !important;
+        background: none !important;
+      }
+    `;
+    document.head.appendChild(s);
+    return () => { document.head.removeChild(s); };
+  }, []);
 
   // ── 인트로 스킵 ─────────────────────────────────────────────────────
   const skipIntro = useCallback(() => {
@@ -756,14 +809,36 @@ export default function MapClient({ bars, onBarClick, selectedBarId }: Props) {
         );
       });
     } else {
+      // 팝업 닫기 (마커 재생성 시)
+      if (popupRef.current) { popupRef.current.remove(); popupRef.current = null; }
       bars.forEach(bar => {
         const el    = document.createElement('div');
         const inner = document.createElement('div');
         inner.innerHTML = buildPinHTML(bar, bar.id === selectedBarId);
         inner.style.transition = 'transform 0.12s';
         el.appendChild(inner);
-        el.addEventListener('click', () => onBarClick(bar.id));
-        el.addEventListener('mouseenter', () => { inner.style.transform = 'scale(1.08)'; });
+        el.addEventListener('click', () => {
+          const zoom = zoomRef.current;
+          if (bar.id === selectedBarId && zoom >= 14) {
+            // 두 번째 클릭 (이미 선택된 바 + 충분히 줌인) → 팝업 토글
+            if (popupRef.current) {
+              popupRef.current.remove(); popupRef.current = null;
+            } else {
+              const p = new mapboxgl.Popup({
+                closeButton: true, closeOnClick: false,
+                anchor: 'bottom', offset: 24, className: 'hon-popup',
+              }).setLngLat([bar.lng, bar.lat]).setHTML(buildPopupHTML(bar)).addTo(map);
+              p.on('close', () => { popupRef.current = null; });
+              popupRef.current = p;
+            }
+          } else {
+            // 첫 번째 클릭 → 줌인 후 선택
+            if (popupRef.current) { popupRef.current.remove(); popupRef.current = null; }
+            onBarClick(bar.id);
+            map.flyTo({ center: [bar.lng, bar.lat], zoom: Math.max(zoom, 15), duration: 650, pitch: 50 });
+          }
+        });
+        el.addEventListener('mouseenter', () => { inner.style.transform = 'scale(1.1)'; });
         el.addEventListener('mouseleave', () => { inner.style.transform = 'scale(1)'; });
         markersRef.current.push(
           new mapboxgl.Marker({ element: el, anchor: 'bottom' })
@@ -777,6 +852,7 @@ export default function MapClient({ bars, onBarClick, selectedBarId }: Props) {
   useEffect(() => {
     if (!mapReady || isClustered || !mapRef.current) return;
     const map = mapRef.current;
+    if (popupRef.current) { popupRef.current.remove(); popupRef.current = null; }
     markersRef.current.forEach(m => m.remove());
     markersRef.current = [];
     bars.forEach(bar => {
@@ -785,8 +861,26 @@ export default function MapClient({ bars, onBarClick, selectedBarId }: Props) {
       inner.innerHTML = buildPinHTML(bar, bar.id === selectedBarId);
       inner.style.transition = 'transform 0.12s';
       el.appendChild(inner);
-      el.addEventListener('click', () => onBarClick(bar.id));
-      el.addEventListener('mouseenter', () => { inner.style.transform = 'scale(1.08)'; });
+      el.addEventListener('click', () => {
+        const zoom = zoomRef.current;
+        if (bar.id === selectedBarId && zoom >= 14) {
+          if (popupRef.current) {
+            popupRef.current.remove(); popupRef.current = null;
+          } else {
+            const p = new mapboxgl.Popup({
+              closeButton: true, closeOnClick: false,
+              anchor: 'bottom', offset: 24, className: 'hon-popup',
+            }).setLngLat([bar.lng, bar.lat]).setHTML(buildPopupHTML(bar)).addTo(map);
+            p.on('close', () => { popupRef.current = null; });
+            popupRef.current = p;
+          }
+        } else {
+          if (popupRef.current) { popupRef.current.remove(); popupRef.current = null; }
+          onBarClick(bar.id);
+          map.flyTo({ center: [bar.lng, bar.lat], zoom: Math.max(zoom, 15), duration: 650, pitch: 50 });
+        }
+      });
+      el.addEventListener('mouseenter', () => { inner.style.transform = 'scale(1.1)'; });
       el.addEventListener('mouseleave', () => { inner.style.transform = 'scale(1)'; });
       markersRef.current.push(
         new mapboxgl.Marker({ element: el, anchor: 'bottom' })
