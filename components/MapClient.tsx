@@ -34,7 +34,7 @@ const INIT_LNG     = 126.9918;
 const INIT_LAT     = 37.5519;
 const CLUSTER_ZOOM = 12;
 
-// ── 지역 레이블 ────────────────────────────────────────────────────────
+// ── 지역 레이블 ───────────────────────────────────────────────────────
 const AREA_LABELS = [
   { name: '홍대',        lat: 37.5558, lng: 126.9236 },
   { name: '합정·망원',   lat: 37.5490, lng: 126.9140 },
@@ -86,12 +86,12 @@ function computeClusters(bars: BarWithStats[], gridSize: number): Cluster[] {
 
 function getOccupancyColor(total: number, capacity: number) {
   const r = capacity > 0 ? total / capacity : 0;
-  if (r < 0.4) return { color: '#4ade80', glow: 'rgba(74,222,128,0.3)',   label: '여유' };
-  if (r < 0.7) return { color: '#fb923c', glow: 'rgba(251,146,60,0.3)',   label: '보통' };
-  return           { color: '#f87171', glow: 'rgba(248,113,113,0.3)',     label: '혼잡' };
+  if (r < 0.4) return { color: '#4ade80', label: '여유' };
+  if (r < 0.7) return { color: '#fb923c', label: '보통' };
+  return           { color: '#f87171', label: '혼잡' };
 }
 
-/** 모든 심볼 레이어 텍스트를 한국어로 변경 */
+// ── 한국어 레이블 (최초 style.load 시 1회) ────────────────────────────
 function setKorean(map: mapboxgl.Map) {
   try {
     for (const layer of map.getStyle().layers) {
@@ -105,88 +105,74 @@ function setKorean(map: mapboxgl.Map) {
   } catch { /* skip */ }
 }
 
-/**
- * 타일 색상 커스터마이징 — dark-v11 위에 레이어별로 컬러 오버라이드
- * 배경 #08081a (UI와 동일) / 물 #0d1f3c / 공원 #0b1a0e / 도로 계열 어두운 네이비
- */
+// ── 타일 색상 (UI #08081a 팔레트와 통일) ─────────────────────────────
 function setTileColors(map: mapboxgl.Map) {
-  const pairs: [string, string, string][] = [
-    // [레이어id, paintProp, color]
-    // ── 배경 / 육지 ──
-    ['land',                     'background-color', '#08081a'],
-    ['land-structure',           'background-color', '#08081a'],
-    ['landcover',                'fill-color',       '#08081a'],
-    ['landuse',                  'fill-color',       '#0c0c1e'],
-    ['landuse-residential',      'fill-color',       '#0c0c1e'],
-    // ── 공원 / 자연 ──
-    ['national-park',            'fill-color',       '#0b1710'],
-    ['landuse_overlay',          'fill-color',       '#0b1710'],
-    // ── 물 ──
-    ['water',                    'fill-color',       '#070f1c'],
-    ['water-depth',              'fill-color',       '#060d18'],
-    ['waterway',                 'line-color',       '#0a1525'],
-    ['waterway-shadow',          'line-color',       '#0a1525'],
-    // ── 도로 (어두운 네이비 계열) ──
-    ['road-motorway-trunk',      'line-color',       '#141e32'],
-    ['road-primary',             'line-color',       '#111828'],
-    ['road-secondary-tertiary',  'line-color',       '#0e1520'],
-    ['road-street',              'line-color',       '#0d1320'],
-    ['road-local',               'line-color',       '#0b1020'],
-    ['road-pedestrian',          'line-color',       '#0d1220'],
-    ['road-minor',               'line-color',       '#0b1020'],
-    // ── 도로 케이싱 ──
-    ['road-motorway-trunk-case', 'line-color',       '#0a1028'],
-    ['road-primary-case',        'line-color',       '#0a1028'],
-    // ── 건물 ──
-    ['building',                 'fill-color',       '#0d1220'],
-    ['building-outline',         'line-color',       '#111828'],
-    // ── 공항·기차역 ──
-    ['aeroway-polygon',          'fill-color',       '#0b0f1a'],
-    ['aeroway-line',             'line-color',       '#131c2e'],
-    // ── 터널 ──
-    ['tunnel-motorway-trunk',    'line-color',       '#0d1528'],
-    ['tunnel-primary',           'line-color',       '#0c1325'],
+  const pairs: [string, string][] = [
+    ['land',                     'background-color:#08081a'],
+    ['land-structure',           'background-color:#08081a'],
+    ['landcover',                'fill-color:#08081a'],
+    ['landuse',                  'fill-color:#0c0c1e'],
+    ['landuse-residential',      'fill-color:#0c0c1e'],
+    ['national-park',            'fill-color:#0b1710'],
+    ['landuse_overlay',          'fill-color:#0b1710'],
+    ['water',                    'fill-color:#070f1c'],
+    ['water-depth',              'fill-color:#060d18'],
+    ['waterway',                 'line-color:#0a1525'],
+    ['waterway-shadow',          'line-color:#0a1525'],
+    ['road-motorway-trunk',      'line-color:#141e32'],
+    ['road-primary',             'line-color:#111828'],
+    ['road-secondary-tertiary',  'line-color:#0e1520'],
+    ['road-street',              'line-color:#0d1320'],
+    ['road-local',               'line-color:#0b1020'],
+    ['road-pedestrian',          'line-color:#0d1220'],
+    ['road-minor',               'line-color:#0b1020'],
+    ['road-motorway-trunk-case', 'line-color:#0a1028'],
+    ['road-primary-case',        'line-color:#0a1028'],
+    ['building',                 'fill-color:#0d1220'],
+    ['building-outline',         'line-color:#111828'],
+    ['aeroway-polygon',          'fill-color:#0b0f1a'],
+    ['aeroway-line',             'line-color:#131c2e'],
+    ['tunnel-motorway-trunk',    'line-color:#0d1528'],
+    ['tunnel-primary',           'line-color:#0c1325'],
   ];
-
-  for (const [id, prop, color] of pairs) {
+  for (const [id, propVal] of pairs) {
+    const [prop, color] = propVal.split(':') as [string, string];
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    try { map.setPaintProperty(id, prop as any, color); } catch { /* 레이어 없으면 skip */ }
+    try { map.setPaintProperty(id, prop as any, color); } catch { /* skip */ }
   }
 }
 
-// ── 핀 HTML ────────────────────────────────────────────────────────────
+// ── 컴팩트 핀 HTML ────────────────────────────────────────────────────
 function buildClusterHTML(cluster: Cluster): string {
   const total = cluster.male + cluster.female;
   const occ   = getOccupancyColor(total, cluster.count * 20);
-  return `<div style="
-    position:relative;text-align:center;cursor:pointer;user-select:none;
+  return `<div style="text-align:center;cursor:pointer;user-select:none;
     font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
     <div style="
-      background:rgba(10,10,22,0.92);
-      border:1px solid rgba(79,195,247,0.35);
-      border-radius:10px;padding:10px 20px;min-width:130px;
+      background:rgba(10,10,22,0.9);
+      border:1px solid rgba(79,195,247,0.3);
+      border-radius:8px;padding:5px 12px;
       backdrop-filter:blur(12px);
-      box-shadow:0 0 24px rgba(79,195,247,0.12),0 8px 32px rgba(0,0,0,0.6);">
-      <div style="font-size:12px;font-weight:700;color:rgba(255,255,255,0.92);
-        white-space:nowrap;letter-spacing:0.3px;margin-bottom:6px;">
-        📍 ${cluster.label} 혼술바
+      box-shadow:0 0 16px rgba(79,195,247,0.1),0 4px 16px rgba(0,0,0,0.6);
+      white-space:nowrap;">
+      <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.85);
+        letter-spacing:0.2px;margin-bottom:3px;">
+        ${cluster.label}
       </div>
-      <div style="display:flex;gap:8px;justify-content:center;align-items:center;">
-        <span style="font-size:11px;color:#90cdf4;font-weight:600;">♂ ${cluster.male}</span>
-        <span style="width:1px;height:10px;background:rgba(255,255,255,0.15);"></span>
-        <span style="font-size:11px;color:#f9a8d4;font-weight:600;">♀ ${cluster.female}</span>
-        <span style="width:1px;height:10px;background:rgba(255,255,255,0.15);"></span>
-        <span style="font-size:10px;color:${occ.color};font-weight:700;
-          background:${occ.glow};padding:2px 7px;border-radius:99px;
-          border:1px solid ${occ.color}55;">
-          ${cluster.count}곳 ${occ.label}
+      <div style="display:flex;gap:6px;align-items:center;justify-content:center;">
+        <span style="font-size:10px;color:#90cdf4;font-weight:600;">♂${cluster.male}</span>
+        <span style="font-size:10px;color:#f9a8d4;font-weight:600;">♀${cluster.female}</span>
+        <span style="font-size:9px;color:${occ.color};font-weight:700;
+          padding:1px 5px;border-radius:99px;
+          background:${occ.color}18;border:1px solid ${occ.color}44;">
+          ${cluster.count}곳
         </span>
       </div>
     </div>
     <div style="display:flex;justify-content:center;margin-top:-1px;">
       <div style="width:0;height:0;
-        border-left:8px solid transparent;border-right:8px solid transparent;
-        border-top:10px solid rgba(79,195,247,0.35);">
+        border-left:5px solid transparent;border-right:5px solid transparent;
+        border-top:6px solid rgba(79,195,247,0.3);">
       </div>
     </div>
   </div>`;
@@ -196,39 +182,36 @@ function buildPinHTML(bar: BarWithStats, isSelected: boolean): string {
   const { male, female } = bar.stats;
   const occ = getOccupancyColor(male + female, bar.capacity);
   const pinColor    = isSelected ? '#fbbf24' : '#4fc3f7';
-  const borderColor = isSelected ? 'rgba(251,191,36,0.5)' : 'rgba(79,195,247,0.35)';
-  const glowColor   = isSelected ? 'rgba(251,191,36,0.2)' : 'rgba(79,195,247,0.12)';
-  return `<div style="
-    position:relative;text-align:center;cursor:pointer;user-select:none;
+  const borderColor = isSelected ? 'rgba(251,191,36,0.45)' : 'rgba(79,195,247,0.3)';
+  const glowColor   = isSelected ? 'rgba(251,191,36,0.15)' : 'rgba(79,195,247,0.08)';
+  const name = bar.name.length > 10 ? bar.name.slice(0, 9) + '…' : bar.name;
+  return `<div style="text-align:center;cursor:pointer;user-select:none;
     font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
     <div style="
-      background:rgba(10,10,22,0.92);
-      border:1px solid ${borderColor};border-radius:8px;
-      padding:6px 14px;margin-bottom:4px;min-width:90px;
-      backdrop-filter:blur(12px);
-      box-shadow:0 0 20px ${glowColor},0 4px 20px rgba(0,0,0,0.5);">
-      <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.92);
-        white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;
-        letter-spacing:0.2px;margin-bottom:4px;">
-        ${bar.name}
+      background:rgba(10,10,22,0.88);
+      border:1px solid ${borderColor};border-radius:6px;
+      padding:4px 9px;margin-bottom:3px;
+      backdrop-filter:blur(10px);
+      box-shadow:0 0 12px ${glowColor},0 3px 12px rgba(0,0,0,0.5);">
+      <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.88);
+        white-space:nowrap;letter-spacing:0.1px;margin-bottom:2px;">
+        ${name}
       </div>
-      <div style="display:flex;gap:5px;justify-content:center;align-items:center;">
-        <span style="font-size:10px;color:#90cdf4;font-weight:600;">♂ ${male}</span>
-        <span style="font-size:10px;color:#f9a8d4;font-weight:600;">♀ ${female}</span>
-        <span style="font-size:8px;color:${occ.color};
-          background:${occ.glow};padding:1px 6px;border-radius:99px;
-          border:1px solid ${occ.color}44;font-weight:700;">
-          ${occ.label}
+      <div style="display:flex;gap:4px;justify-content:center;align-items:center;">
+        <span style="font-size:9px;color:#90cdf4;font-weight:600;">♂${male}</span>
+        <span style="font-size:9px;color:#f9a8d4;font-weight:600;">♀${female}</span>
+        <span style="display:inline-block;width:6px;height:6px;border-radius:50%;
+          background:${occ.color};box-shadow:0 0 4px ${occ.color}88;flex-shrink:0;">
         </span>
       </div>
     </div>
     <div style="display:flex;justify-content:center;">
-      <svg width="20" height="27" viewBox="0 0 20 27"
-        style="filter:drop-shadow(0 0 6px ${pinColor}88);"
+      <svg width="14" height="19" viewBox="0 0 14 19"
+        style="filter:drop-shadow(0 0 4px ${pinColor}77);"
         xmlns="http://www.w3.org/2000/svg">
-        <path d="M10 26 C10 26,1 16,1 10 A9 9 0 0 1 19 10 C19 16,10 26,10 26Z"
-          fill="${pinColor}" stroke="rgba(0,0,0,0.5)" stroke-width="1"/>
-        <circle cx="10" cy="10" r="4" fill="rgba(255,255,255,0.3)"/>
+        <path d="M7 18C7 18,1 12,1 7A6 6 0 0 1 13 7C13 12,7 18,7 18Z"
+          fill="${pinColor}" stroke="rgba(0,0,0,0.4)" stroke-width="0.8"/>
+        <circle cx="7" cy="7" r="2.5" fill="rgba(255,255,255,0.3)"/>
       </svg>
     </div>
   </div>`;
@@ -236,14 +219,20 @@ function buildPinHTML(bar: BarWithStats, isSelected: boolean): string {
 
 // ── 메인 컴포넌트 ──────────────────────────────────────────────────────
 export default function MapClient({ bars, onBarClick, selectedBarId }: Props) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef       = useRef<mapboxgl.Map | null>(null);
-  const markersRef   = useRef<mapboxgl.Marker[]>([]);
-  const [mapReady,   setMapReady]  = useState(false);
-  const [introText,  setIntroText] = useState('지구를 탐색 중...');
-  const [zoom,       setZoom]      = useState(11);
+  const containerRef    = useRef<HTMLDivElement>(null);
+  const mapRef          = useRef<mapboxgl.Map | null>(null);
+  const markersRef      = useRef<mapboxgl.Marker[]>([]);
 
-  // ── 지도 초기화 ──
+  // 줌은 ref로 관리 → 매 프레임 React 리렌더 방지
+  const zoomRef         = useRef(11);
+  // 클러스터 전환 여부만 state로 관리 (임계값 통과 시에만 리렌더)
+  const isClusteredRef  = useRef(true);
+  const [isClustered,   setIsClustered]  = useState(true);
+
+  const [mapReady,      setMapReady]     = useState(false);
+  const [introText,     setIntroText]    = useState('지구를 탐색 중...');
+
+  // ── 지도 초기화 ──────────────────────────────────────────────────────
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
@@ -253,23 +242,19 @@ export default function MapClient({ bars, onBarClick, selectedBarId }: Props) {
       container: containerRef.current,
       style: 'mapbox://styles/mapbox/dark-v11',
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      projection: 'globe' as any,   // 지구본 프로젝션
-      center: [126.0, 30.0],        // 시작: 한반도 남쪽 우주
-      zoom: 2,                      // minZoom 없이 시작해야 지구본이 보임
+      projection: 'globe' as any,
+      center: [126.0, 30.0],   // 우주에서 시작
+      zoom: 2,                  // minZoom 없이 → 지구본 보임
       pitch: 0,
       bearing: 10,
-      // minZoom은 인트로 종료 후 setMinZoom(10)으로 설정
       maxZoom: 18,
       attributionControl: false,
     });
 
-    map.addControl(
-      new mapboxgl.NavigationControl({ showCompass: true }),
-      'bottom-right',
-    );
+    map.addControl(new mapboxgl.NavigationControl({ showCompass: true }), 'bottom-right');
 
     map.on('load', () => {
-      // ── 우주 대기권 + 별 ──
+      // 우주 대기권 + 별
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (map as any).setFog({
         color:            'rgba(120, 160, 210, 0.4)',
@@ -279,12 +264,12 @@ export default function MapClient({ bars, onBarClick, selectedBarId }: Props) {
         'star-intensity': 0.85,
       });
 
-      // ── 한국어 레이블 + 타일 색상 ──
+      // 한국어 + 타일 색상 — style.load 시에만 (styledata 대신)
       setKorean(map);
       setTileColors(map);
-      map.on('styledata', () => { setKorean(map); setTileColors(map); });
+      map.on('style.load', () => { setKorean(map); setTileColors(map); });
 
-      // ── 3D 빌딩 ──
+      // 3D 빌딩
       map.addLayer({
         id: '3d-buildings',
         source: 'composite',
@@ -295,9 +280,7 @@ export default function MapClient({ bars, onBarClick, selectedBarId }: Props) {
         paint: {
           'fill-extrusion-color': [
             'interpolate', ['linear'], ['get', 'height'],
-            0,   '#0f172a',
-            40,  '#1e3a5f',
-            150, '#1e40af',
+            0, '#0f172a', 40, '#1e3a5f', 150, '#1e40af',
           ],
           'fill-extrusion-height':  ['interpolate', ['linear'], ['zoom'], 14, 0, 14.05, ['get', 'height']],
           'fill-extrusion-base':    ['interpolate', ['linear'], ['zoom'], 14, 0, 14.05, ['get', 'min_height']],
@@ -305,44 +288,54 @@ export default function MapClient({ bars, onBarClick, selectedBarId }: Props) {
         },
       });
 
-      // ── 지구본 → 서울 인트로 비행 ──
+      // 지구본 → 서울 인트로 비행
       setTimeout(() => {
         setIntroText('서울로 이동 중...');
         map.flyTo({
-          center:   [INIT_LNG, INIT_LAT],
-          zoom:     11,
-          pitch:    45,
-          bearing:  -10,
-          duration: 5500,
-          curve:    1.8,
-          essential: true,
+          center: [INIT_LNG, INIT_LAT],
+          zoom: 11, pitch: 45, bearing: -10,
+          duration: 5500, curve: 1.8, essential: true,
         });
       }, 1200);
 
-      // flyTo 끝나면 minZoom 잠금 + 인트로 종료
-      map.once('moveend', () => {
+      // 인트로 종료 타이밍 = 딜레이 + flyTo 시간 + 여유 300ms
+      setTimeout(() => {
         map.setMinZoom(10);
         setMapReady(true);
-      });
+        // 초기 클러스터 상태 설정
+        const z = map.getZoom();
+        zoomRef.current = z;
+        const c = z < CLUSTER_ZOOM;
+        isClusteredRef.current = c;
+        setIsClustered(c);
+      }, 1200 + 5500 + 300);
     });
 
-    map.on('zoom', () => setZoom(map.getZoom()));
+    // 줌 변경 시 클러스터 임계값 교차 시에만 state 업데이트
+    map.on('zoom', () => {
+      const z = map.getZoom();
+      zoomRef.current = z;
+      const nowClustered = z < CLUSTER_ZOOM;
+      if (nowClustered !== isClusteredRef.current) {
+        isClusteredRef.current = nowClustered;
+        setIsClustered(nowClustered);
+      }
+    });
 
     mapRef.current = map;
     return () => { map.remove(); mapRef.current = null; };
   }, []);
 
-  // ── 마커 업데이트 ──
+  // ── 마커 업데이트 — isClustered 변경 시에만 전체 재생성 ──────────────
   useEffect(() => {
     if (!mapReady || !mapRef.current) return;
     const map = mapRef.current;
-    const isClustered = zoom < CLUSTER_ZOOM;
 
     markersRef.current.forEach(m => m.remove());
     markersRef.current = [];
 
     if (isClustered) {
-      const gs = zoom < 11 ? 0.06 : 0.028;
+      const gs = zoomRef.current < 11 ? 0.06 : 0.028;
       computeClusters(bars, gs).forEach(cluster => {
         const el = document.createElement('div');
         el.innerHTML = buildClusterHTML(cluster);
@@ -351,8 +344,7 @@ export default function MapClient({ bars, onBarClick, selectedBarId }: Props) {
         );
         markersRef.current.push(
           new mapboxgl.Marker({ element: el, anchor: 'bottom' })
-            .setLngLat([cluster.lng, cluster.lat])
-            .addTo(map),
+            .setLngLat([cluster.lng, cluster.lat]).addTo(map),
         );
       });
     } else {
@@ -361,19 +353,39 @@ export default function MapClient({ bars, onBarClick, selectedBarId }: Props) {
         const el = document.createElement('div');
         el.innerHTML = buildPinHTML(bar, isSelected);
         el.addEventListener('click', () => onBarClick(bar.id));
-        el.style.transition = 'transform 0.15s';
-        el.addEventListener('mouseenter', () => { el.style.transform = 'scale(1.06)'; });
+        el.style.transition = 'transform 0.12s';
+        el.addEventListener('mouseenter', () => { el.style.transform = 'scale(1.08)'; });
         el.addEventListener('mouseleave', () => { el.style.transform = 'scale(1)'; });
         markersRef.current.push(
           new mapboxgl.Marker({ element: el, anchor: 'bottom' })
-            .setLngLat([bar.lng, bar.lat])
-            .addTo(map),
+            .setLngLat([bar.lng, bar.lat]).addTo(map),
         );
       });
     }
-  }, [bars, selectedBarId, onBarClick, mapReady, zoom]);
+  }, [bars, selectedBarId, onBarClick, mapReady, isClustered]);
 
-  const isClustered = zoom < CLUSTER_ZOOM;
+  // ── 선택 상태 변경 시 핀만 갱신 (전체 재생성 없이) ─────────────────
+  useEffect(() => {
+    if (!mapReady || isClustered || !mapRef.current) return;
+    const map = mapRef.current;
+    markersRef.current.forEach(m => m.remove());
+    markersRef.current = [];
+    bars.forEach(bar => {
+      const isSelected = bar.id === selectedBarId;
+      const el = document.createElement('div');
+      el.innerHTML = buildPinHTML(bar, isSelected);
+      el.addEventListener('click', () => onBarClick(bar.id));
+      el.style.transition = 'transform 0.12s';
+      el.addEventListener('mouseenter', () => { el.style.transform = 'scale(1.08)'; });
+      el.addEventListener('mouseleave', () => { el.style.transform = 'scale(1)'; });
+      markersRef.current.push(
+        new mapboxgl.Marker({ element: el, anchor: 'bottom' })
+          .setLngLat([bar.lng, bar.lat]).addTo(map),
+      );
+    });
+  // selectedBarId 변경 시에만 별도로 실행
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedBarId]);
 
   return (
     <div className="relative w-full h-full">
@@ -385,14 +397,14 @@ export default function MapClient({ bars, onBarClick, selectedBarId }: Props) {
           <div className="flex items-center gap-2 px-4 py-2 text-xs whitespace-nowrap"
             style={{
               background: 'rgba(10,10,22,0.82)',
-              border: '1px solid rgba(79,195,247,0.25)',
+              border: '1px solid rgba(79,195,247,0.22)',
               borderRadius: '99px',
-              color: 'rgba(255,255,255,0.6)',
+              color: 'rgba(255,255,255,0.55)',
               backdropFilter: 'blur(10px)',
               boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
             }}>
             <span>🔍</span>
-            <span>클릭하거나 확대하면 개별 혼술바를 볼 수 있어요</span>
+            <span>확대하면 개별 혼술바를 볼 수 있어요</span>
           </div>
         </div>
       )}
