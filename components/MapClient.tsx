@@ -350,12 +350,16 @@ export default function MapClient({ bars, onBarClick, selectedBarId }: Props) {
     } else {
       bars.forEach(bar => {
         const isSelected = bar.id === selectedBarId;
+        // el: Mapbox가 transform으로 위치 잡는 루트 → 절대 transform 건드리면 안 됨
+        // inner: scale 애니메이션은 이 래퍼에만 적용
         const el = document.createElement('div');
-        el.innerHTML = buildPinHTML(bar, isSelected);
+        const inner = document.createElement('div');
+        inner.innerHTML = buildPinHTML(bar, isSelected);
+        inner.style.transition = 'transform 0.12s';
+        el.appendChild(inner);
         el.addEventListener('click', () => onBarClick(bar.id));
-        el.style.transition = 'transform 0.12s';
-        el.addEventListener('mouseenter', () => { el.style.transform = 'scale(1.08)'; });
-        el.addEventListener('mouseleave', () => { el.style.transform = 'scale(1)'; });
+        el.addEventListener('mouseenter', () => { inner.style.transform = 'scale(1.08)'; });
+        el.addEventListener('mouseleave', () => { inner.style.transform = 'scale(1)'; });
         markersRef.current.push(
           new mapboxgl.Marker({ element: el, anchor: 'bottom' })
             .setLngLat([bar.lng, bar.lat]).addTo(map),
@@ -373,11 +377,13 @@ export default function MapClient({ bars, onBarClick, selectedBarId }: Props) {
     bars.forEach(bar => {
       const isSelected = bar.id === selectedBarId;
       const el = document.createElement('div');
-      el.innerHTML = buildPinHTML(bar, isSelected);
+      const inner = document.createElement('div');
+      inner.innerHTML = buildPinHTML(bar, isSelected);
+      inner.style.transition = 'transform 0.12s';
+      el.appendChild(inner);
       el.addEventListener('click', () => onBarClick(bar.id));
-      el.style.transition = 'transform 0.12s';
-      el.addEventListener('mouseenter', () => { el.style.transform = 'scale(1.08)'; });
-      el.addEventListener('mouseleave', () => { el.style.transform = 'scale(1)'; });
+      el.addEventListener('mouseenter', () => { inner.style.transform = 'scale(1.08)'; });
+      el.addEventListener('mouseleave', () => { inner.style.transform = 'scale(1)'; });
       markersRef.current.push(
         new mapboxgl.Marker({ element: el, anchor: 'bottom' })
           .setLngLat([bar.lng, bar.lat]).addTo(map),
