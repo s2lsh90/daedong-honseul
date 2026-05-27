@@ -241,152 +241,113 @@ function getChainColor(name: string): string {
   return CHAIN_PALETTE[strHash(getChainName(name)) % CHAIN_PALETTE.length];
 }
 
-// ── 아이소메트릭 3D 글라스 SVG (건물처럼 세 면이 보이는 정투영) ───────
-// 앞면(밝음) + 오른쪽면(어두움) + 윗면(위에서 내려다봄) → Mapbox 빌딩과 같은 구조
+// ── 아이소메트릭 3D 글라스 SVG ─────────────────────────────────────────
+// 크기: 기존 대비 ~55% 축소 / 색상: 지도 다크 네이비 톤으로 통일
+// 앞면(#0a1428) + 오른쪽면(#030608) + 윗면(accent색) → 지도에 자연스럽게 녹아듦
 // anchor='bottom' → SVG 맨 아래 그림자 = 지도 좌표 지면
 function beerMugSVG(accent: string, selected: boolean): string {
   const h = accent.slice(1);
   const sel = selected;
-  // 아이소메트릭 오프셋: dx=+11, dy=-8 (오른쪽 위 방향)
-  // 앞면: x=4..43, y=30..74 (39×44)
-  // 오른쪽면: (43,30)→(54,22)→(54,66)→(43,74)
-  // 윗면: (4,30)→(43,30)→(54,22)→(15,22)
-  return `<svg width="62" height="90" viewBox="0 0 62 90" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="bF${h}" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0%" stop-color="#7c2d12"/>
-      <stop offset="50%" stop-color="#d97706"/>
-      <stop offset="100%" stop-color="#b45309"/>
-    </linearGradient>
-  </defs>
+  // isometric offset: dx=+7, dy=-5
+  // 앞면: x=2..25, y=16..44 (23×28)
+  // 오른쪽면: M25,16 L32,11 L32,39 L25,44
+  // 윗면: M2,16 L25,16 L32,11 L9,11
+  return `<svg width="38" height="54" viewBox="0 0 38 54" xmlns="http://www.w3.org/2000/svg">
   <!-- 지면 그림자 -->
-  <ellipse cx="29" cy="87" rx="27" ry="6" fill="rgba(0,0,0,0.6)"/>
-  <!-- ① 오른쪽 측면 — 가장 어두운 면 (깊이) -->
-  <path d="M43 30 L54 22 L54 66 L43 74 Z" fill="#2a0900"/>
-  <!-- ② 앞면 — 주 몸통 (중간 밝기) -->
-  <rect x="4" y="30" width="39" height="44" fill="url(#bF${h})"/>
-  ${sel ? `<rect x="4" y="30" width="39" height="44" fill="none" stroke="#fbbf24" stroke-width="2" opacity="0.9"/>` : ''}
-  <!-- 손잡이 뒤 (검정 외곽) -->
-  <path d="M43 38 C63 38 63 62 43 62" fill="none" stroke="#150400" stroke-width="13" stroke-linecap="round"/>
-  <!-- 손잡이 오른쪽면 (어두움) -->
-  <path d="M43 38 C61 38 61 62 43 62" fill="none" stroke="#2a0900" stroke-width="9" stroke-linecap="round"/>
-  <!-- 손잡이 앞면 (호박색) -->
-  <path d="M43 38 C58 38 58 62 43 62" fill="none" stroke="#b45309" stroke-width="6" stroke-linecap="round"/>
-  <!-- 손잡이 하이라이트 -->
-  <path d="M43 38 C56 39 56 62 43 62" fill="none" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round"/>
+  <ellipse cx="16" cy="52" rx="15" ry="3" fill="rgba(0,0,0,0.45)"/>
+  <!-- ① 오른쪽면 (거의 검정) -->
+  <path d="M25 16 L32 11 L32 39 L25 44 Z" fill="#03060e"/>
+  <!-- ② 앞면 (지도 다크 네이비) -->
+  <rect x="2" y="16" width="23" height="28" fill="#0a1428"/>
+  <!-- accent 세로 반사선 (왼쪽 가장자리) -->
+  <rect x="2" y="16" width="2.5" height="28" rx="1" fill="${accent}" opacity="0.4"/>
+  ${sel ? `<rect x="2" y="16" width="23" height="28" fill="none" stroke="#fbbf24" stroke-width="1.5"/>` : ''}
+  <!-- 손잡이 외곽(검정) + 측면(네이비) + accent 하이라이트 -->
+  <path d="M25 21 C36 21 36 37 25 37" fill="none" stroke="#030608" stroke-width="7" stroke-linecap="round"/>
+  <path d="M25 21 C34 21 34 37 25 37" fill="none" stroke="#0a1428" stroke-width="4.5" stroke-linecap="round"/>
+  <path d="M25 21 C32 22 32 36 25 37" fill="none" stroke="${accent}" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
   <!-- ③ 윗면 배경 (어두운 기저) -->
-  <path d="M4 30 L43 30 L54 22 L15 22 Z" fill="#2a0900"/>
-  <!-- ③ 윗면 거품 (밝게 — 위에서 보이는 면) -->
-  <path d="M4 28 L43 28 L54 20 L15 20 Z" fill="white"/>
-  <!-- 거품 방울 (아이소메트릭 면 위) -->
-  <ellipse cx="28" cy="25" rx="13" ry="5" fill="white"/>
-  <ellipse cx="40" cy="24" rx="8"  ry="3.5" fill="white"/>
-  <ellipse cx="16" cy="26" rx="7"  ry="3" fill="white"/>
-  <ellipse cx="48" cy="22" rx="5"  ry="2.2" fill="white" opacity="0.8"/>
-  <!-- 림 하이라이트 선 -->
-  <path d="M4 28 L43 28 L54 20 L15 20 Z" fill="none"
-    stroke="${sel ? '#fbbf24' : 'rgba(255,255,255,0.65)'}" stroke-width="1.3"/>
-  <!-- 앞면 빛 반사 줄기 -->
-  <rect x="9" y="35" width="5" height="33" rx="2.5" fill="rgba(255,255,255,0.22)"/>
-  <!-- 오른쪽면 미세 하이라이트 -->
-  <line x1="44" y1="23" x2="44" y2="65" stroke="rgba(255,255,255,0.06)" stroke-width="2"/>
+  <path d="M2 16 L25 16 L32 11 L9 11 Z" fill="#050c1a"/>
+  <!-- 거품 표면 (흰색 — 위에서 내려다봄) -->
+  <path d="M2 15 L25 15 L32 10 L9 10 Z" fill="rgba(255,255,255,0.82)"/>
+  <ellipse cx="14" cy="13" rx="7"   ry="2.5" fill="white"/>
+  <ellipse cx="22" cy="12" rx="4.5" ry="1.8" fill="white" opacity="0.9"/>
+  <ellipse cx="8"  cy="13.5" rx="3" ry="1.3" fill="white" opacity="0.85"/>
+  <!-- 림 accent 테두리 -->
+  <path d="M2 15 L25 15 L32 10 L9 10 Z" fill="none"
+    stroke="${sel ? '#fbbf24' : accent}" stroke-width="0.9" opacity="${sel ? 1 : 0.65}"/>
 </svg>`;
 }
 
 function whiskeyGlassSVG(accent: string, selected: boolean): string {
   const h = accent.slice(1);
   const sel = selected;
-  // 온더록스 글라스: 위가 살짝 넓은 사다리꼴
-  // 앞면: (5,26)→(43,26)→(40,66)→(8,66)  width 38→32, height 40
-  // 오른쪽면: (43,26)→(53,18)→(50,58)→(40,66)  depth +10,-8
-  // 윗면: (5,26)→(43,26)→(53,18)→(15,18)
-  return `<svg width="60" height="80" viewBox="0 0 60 80" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="wF${h}" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0%" stop-color="#7c2d12"/>
-      <stop offset="50%" stop-color="#c2410c"/>
-      <stop offset="100%" stop-color="#92400e"/>
-    </linearGradient>
-  </defs>
+  // 온더록스: 앞면(4,14)→(26,14)→(24,44)→(6,44) 22×30
+  // 오른쪽: M26,14 L33,9 L31,39 L24,44  offset +7,-5
+  // 윗면: M4,14 L26,14 L33,9 L11,9
+  return `<svg width="38" height="52" viewBox="0 0 38 52" xmlns="http://www.w3.org/2000/svg">
   <!-- 지면 그림자 -->
-  <ellipse cx="28" cy="77" rx="24" ry="5.5" fill="rgba(0,0,0,0.6)"/>
-  <!-- ① 오른쪽 측면 — 어두운 면 -->
-  <path d="M43 26 L53 18 L50 58 L40 66 Z" fill="#2c0d00"/>
-  <!-- ② 앞면 (사다리꼴) -->
-  <path d="M5 26 L8 66 L40 66 L43 26 Z" fill="url(#wF${h})"/>
-  ${sel ? `<path d="M5 26 L8 66 L40 66 L43 26 Z" fill="none" stroke="#fbbf24" stroke-width="2" opacity="0.9"/>` : ''}
-  <!-- ③ 윗면 배경 (어두움) -->
-  <path d="M5 26 L43 26 L53 18 L15 18 Z" fill="#2c0d00"/>
-  <!-- ③ 윗면 액체 (호박색) -->
-  <path d="M5 24 L43 24 L53 16 L15 16 Z" fill="#7c2d12"/>
-  <path d="M7 23 L41 23 L51 16 L17 16 Z" fill="#d97706" opacity="0.9"/>
+  <ellipse cx="17" cy="50" rx="15" ry="3" fill="rgba(0,0,0,0.45)"/>
+  <!-- ① 오른쪽면 (거의 검정) -->
+  <path d="M26 14 L33 9 L31 39 L24 44 Z" fill="#03060e"/>
+  <!-- ② 앞면 (지도 네이비) -->
+  <path d="M4 14 L6 44 L24 44 L26 14 Z" fill="#0a1428"/>
+  <!-- accent 세로 반사선 -->
+  <path d="M4 14 L4.5 44 L7.5 44 L7 14 Z" fill="${accent}" opacity="0.4" rx="1"/>
+  ${sel ? `<path d="M4 14 L6 44 L24 44 L26 14 Z" fill="none" stroke="#fbbf24" stroke-width="1.5"/>` : ''}
+  <!-- ③ 윗면 배경 -->
+  <path d="M4 14 L26 14 L33 9 L11 9 Z" fill="#050c1a"/>
+  <!-- 액체 표면 (accent 컬러 — 위에서 내려다봄) -->
+  <path d="M4 13 L26 13 L33 8 L11 8 Z" fill="${accent}" opacity="0.35"/>
+  <path d="M5 12.5 L25 12.5 L32 8 L12 8 Z" fill="${accent}" opacity="0.45"/>
   <!-- 얼음 — 아이소메트릭 3면 -->
-  <!-- 얼음 앞면 -->
-  <rect x="16" y="17" width="14" height="9" rx="1" fill="rgba(186,230,255,0.88)"/>
-  <!-- 얼음 오른쪽면 -->
-  <path d="M30 17 L36 12 L36 20 L30 24 Z" fill="rgba(150,210,240,0.72)"/>
-  <!-- 얼음 윗면 -->
-  <path d="M16 17 L30 17 L36 12 L22 12 Z" fill="rgba(220,245,255,0.92)"/>
-  <!-- 컵 테두리 선 (유리 두께) -->
-  <path d="M5 26 L43 26 L53 18 L15 18 Z" fill="none" stroke="rgba(20,5,0,0.9)" stroke-width="2.5"/>
-  <path d="M5 24 L43 24 L53 16 L15 16 Z" fill="none"
-    stroke="${sel ? '#fbbf24' : 'rgba(255,255,255,0.6)'}" stroke-width="1.3"/>
-  <!-- 앞면 빛 반사 -->
-  <path d="M10 29 L11 60" stroke="rgba(255,255,255,0.2)" stroke-width="5" stroke-linecap="round"/>
+  <rect x="10" y="9" width="9"  height="6"  rx="0.8" fill="rgba(200,235,255,0.88)"/>
+  <path d="M19 9  L23 6  L23 11 L19 14 Z"   fill="rgba(170,215,245,0.72)"/>
+  <path d="M10 9  L19 9  L23 6  L14 6 Z"    fill="rgba(225,245,255,0.9)"/>
+  <!-- 유리 두께선 -->
+  <path d="M4 14 L26 14 L33 9 L11 9 Z" fill="none" stroke="rgba(5,10,25,0.95)" stroke-width="2"/>
+  <path d="M4 13 L26 13 L33 8 L11 8 Z" fill="none"
+    stroke="${sel ? '#fbbf24' : accent}" stroke-width="0.9" opacity="${sel ? 1 : 0.65}"/>
 </svg>`;
 }
 
 function wineGlassSVG(accent: string, selected: boolean): string {
   const h = accent.slice(1);
   const sel = selected;
-  // 와인글라스: 볼(상)+스템+받침
-  // 볼 앞면: 베지어 곡선, 오른쪽면: 직선
-  // 받침+스템에도 3면 적용
-  return `<svg width="56" height="100" viewBox="0 0 56 100" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="wnF${h}" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0%" stop-color="#3b0764"/>
-      <stop offset="50%" stop-color="#7c3aed"/>
-      <stop offset="100%" stop-color="#4c1d95"/>
-    </linearGradient>
-  </defs>
+  // 볼(상)+스템+받침, 전체 높이 60
+  // 볼 앞면: bezier, 오른쪽면, 윗면 (와인 액체)
+  return `<svg width="36" height="62" viewBox="0 0 36 62" xmlns="http://www.w3.org/2000/svg">
   <!-- 지면 그림자 -->
-  <ellipse cx="25" cy="97" rx="22" ry="5" fill="rgba(0,0,0,0.6)"/>
+  <ellipse cx="15" cy="60" rx="13" ry="3" fill="rgba(0,0,0,0.45)"/>
 
-  <!-- === 받침 (BASE) === -->
-  <!-- 받침 오른쪽면 -->
-  <path d="M33 84 L41 78 L41 83 L33 89 Z" fill="#150335"/>
-  <!-- 받침 앞면 -->
-  <rect x="12" y="84" width="21" height="5" rx="2.5" fill="#4c1d95"/>
-  <!-- 받침 윗면 (아이소메트릭) -->
-  <path d="M12 84 L33 84 L41 78 L20 78 Z" fill="#2d0d6e"/>
+  <!-- === 받침 === -->
+  <path d="M21 52 L27 48 L27 52 L21 56 Z" fill="#03060e"/>
+  <rect x="8" y="52" width="13" height="4" rx="2" fill="#0a1428"/>
+  <path d="M8 52 L21 52 L27 48 L14 48 Z" fill="#050c1a"/>
 
-  <!-- === 스템 (STEM) === -->
-  <!-- 스템 오른쪽면 -->
-  <path d="M23 52 L27 47 L27 78 L23 83 Z" fill="#150335"/>
-  <!-- 스템 앞면 -->
-  <rect x="20" y="52" width="6" height="30" fill="#3b0f8c"/>
+  <!-- === 스템 === -->
+  <path d="M14 33 L17 30 L17 48 L14 52 Z" fill="#03060e"/>
+  <rect x="12" y="33" width="4" height="19" fill="#0a1428"/>
 
-  <!-- === 볼 (BOWL) === -->
-  <!-- 볼 오른쪽면 (어두운 면) -->
-  <path d="M40 12 L49 6 L46 50 L37 52 Z" fill="#150335"/>
-  <!-- 볼 앞면 (와인) -->
-  <path d="M4 10 C2 32 8 52 22 52 C36 52 43 32 41 10 Z" fill="url(#wnF${h})"/>
-  ${sel ? `<path d="M4 10 C2 32 8 52 22 52 C36 52 43 32 41 10 Z" fill="none" stroke="#fbbf24" stroke-width="2" opacity="0.9"/>` : ''}
-
-  <!-- ③ 볼 윗면 배경 (아이소메트릭 타원형) -->
-  <path d="M4 10 L41 10 L49 4 L12 4 Z" fill="#150335"/>
-  <!-- 와인 표면 (밝은 퍼플) -->
-  <path d="M4 8 L41 8 L49 2 L12 2 Z" fill="#4c1d95"/>
-  <path d="M6 7 L39 7 L47 2 L14 2 Z" fill="#7c3aed" opacity="0.9"/>
+  <!-- === 볼 === -->
+  <!-- 오른쪽면 -->
+  <path d="M25 8 L30 5 L28 31 L22 33 Z" fill="#03060e"/>
+  <!-- 앞면 (다크 네이비) -->
+  <path d="M3 6 C2 20 5 33 14 33 C23 33 27 20 26 6 Z" fill="#0a1428"/>
+  <!-- accent 세로 반사선 (볼 왼쪽) -->
+  <path d="M3 6 C2 20 5 33 7 33 C5 33 4 20 4 6 Z" fill="${accent}" opacity="0.35"/>
+  ${sel ? `<path d="M3 6 C2 20 5 33 14 33 C23 33 27 20 26 6 Z" fill="none" stroke="#fbbf24" stroke-width="1.5"/>` : ''}
+  <!-- ③ 볼 윗면 배경 -->
+  <path d="M3 6 L26 6 L30 3 L7 3 Z" fill="#050c1a"/>
+  <!-- 와인 표면 (accent 컬러 — 위에서 내려다봄) -->
+  <path d="M3 5 L26 5 L30 2 L7 2 Z" fill="${accent}" opacity="0.4"/>
+  <path d="M4 4.5 L25 4.5 L29 2 L8 2 Z" fill="${accent}" opacity="0.55"/>
   <!-- 와인 하이라이트 -->
-  <ellipse cx="22" cy="5" rx="10" ry="2.5" fill="#a78bfa" opacity="0.55"/>
-  <!-- 유리 두께 (어두운 테두리) -->
-  <path d="M4 10 L41 10 L49 4 L12 4 Z" fill="none" stroke="rgba(10,0,30,0.95)" stroke-width="2.5"/>
-  <path d="M4 8 L41 8 L49 2 L12 2 Z" fill="none"
-    stroke="${sel ? '#fbbf24' : 'rgba(255,255,255,0.6)'}" stroke-width="1.3"/>
-  <!-- 볼 앞면 빛 반사 -->
-  <path d="M8 14 C7 28 9 40 13 49" stroke="rgba(255,255,255,0.2)" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <ellipse cx="14" cy="3.5" rx="7" ry="1.5" fill="${accent}" opacity="0.3"/>
+  <!-- 유리 두께선 -->
+  <path d="M3 6 L26 6 L30 3 L7 3 Z" fill="none" stroke="rgba(3,5,15,0.95)" stroke-width="2"/>
+  <path d="M3 5 L26 5 L30 2 L7 2 Z" fill="none"
+    stroke="${sel ? '#fbbf24' : accent}" stroke-width="0.9" opacity="${sel ? 1 : 0.65}"/>
 </svg>`;
 }
 
@@ -626,21 +587,21 @@ function buildPinHTML(bar: BarWithStats, isSelected: boolean): string {
     display:flex;flex-direction:column;align-items:center;
     cursor:pointer;user-select:none;
     font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
-    <!-- 정보 라벨 (글라스 위에 떠 있는 이름표) -->
+    <!-- 정보 라벨 (소형 · 반투명) -->
     <div style="
-      background:rgba(6,6,20,0.92);
+      background:rgba(5,8,20,0.82);
       border:1px solid ${labelBorder};
-      border-radius:5px;padding:3px 8px 2px;
+      border-radius:4px;padding:2px 6px 1px;
       margin-bottom:1px;
-      box-shadow:0 2px 8px rgba(0,0,0,0.65);
+      box-shadow:0 1px 6px rgba(0,0,0,0.5);
       white-space:nowrap;">
-      <div style="font-size:9px;font-weight:700;color:rgba(255,255,255,0.92);
+      <div style="font-size:8px;font-weight:700;color:rgba(255,255,255,0.85);
         letter-spacing:0.1px;margin-bottom:1px;">${shortName}</div>
-      <div style="display:flex;gap:5px;justify-content:center;align-items:center;">
-        <span style="font-size:8px;color:#93c5fd;font-weight:600;">♂${male}</span>
-        <span style="font-size:8px;color:#f9a8d4;font-weight:600;">♀${female}</span>
-        <span style="display:inline-block;width:5px;height:5px;border-radius:50%;
-          background:${occ.color};box-shadow:0 0 4px ${occ.color};flex-shrink:0;"></span>
+      <div style="display:flex;gap:4px;justify-content:center;align-items:center;">
+        <span style="font-size:7.5px;color:#93c5fd;font-weight:600;">♂${male}</span>
+        <span style="font-size:7.5px;color:#f9a8d4;font-weight:600;">♀${female}</span>
+        <span style="display:inline-block;width:4px;height:4px;border-radius:50%;
+          background:${occ.color};flex-shrink:0;"></span>
       </div>
     </div>
     <!-- 아이소메트릭 글라스 (SVG 바닥 그림자가 지도 지면) -->
