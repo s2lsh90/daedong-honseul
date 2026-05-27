@@ -197,7 +197,7 @@ function setTransitStyle(map: mapboxgl.Map) {
     : map.getLayer('road-label') ? 'road-label'
     : undefined;
 
-  // glow 레이어 — 넓고 흐릿 (네온 느낌)
+  // glow 레이어 — 넓고 흐릿 (네온 후광)
   if (!map.getLayer('transit-glow')) {
     try {
       map.addLayer({
@@ -208,15 +208,15 @@ function setTransitStyle(map: mapboxgl.Map) {
         filter: railFilter,
         paint: {
           'line-color': lineColor,
-          'line-width': ['interpolate', ['linear'], ['zoom'], 10, 8, 14, 14] as mapboxgl.Expression,
-          'line-opacity': 0.13,
-          'line-blur': 7,
+          'line-width': ['interpolate', ['linear'], ['zoom'], 10, 16, 12, 22, 14, 30] as mapboxgl.Expression,
+          'line-opacity': 0.22,
+          'line-blur': 10,
         },
       }, insertBefore);
     } catch { /* skip */ }
   }
 
-  // main 레이어 — 선명한 노선 선
+  // main 레이어 — 굵고 선명한 노선
   if (!map.getLayer('transit-lines')) {
     try {
       map.addLayer({
@@ -227,8 +227,8 @@ function setTransitStyle(map: mapboxgl.Map) {
         filter: railFilter,
         paint: {
           'line-color': lineColor,
-          'line-width': ['interpolate', ['linear'], ['zoom'], 10, 1.5, 12, 2.0, 14, 2.8, 16, 3.5] as mapboxgl.Expression,
-          'line-opacity': 0.75,
+          'line-width': ['interpolate', ['linear'], ['zoom'], 10, 3.5, 12, 5, 14, 7, 16, 9] as mapboxgl.Expression,
+          'line-opacity': 0.92,
         },
       }, insertBefore);
     } catch { /* skip */ }
@@ -287,10 +287,9 @@ function buildClusterHTML(cluster: Cluster): string {
   return `<div style="text-align:center;cursor:pointer;user-select:none;
     font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
     <div style="
-      background:rgba(10,10,22,0.9);
+      background:rgba(10,10,22,0.93);
       border:1px solid rgba(79,195,247,0.3);
       border-radius:8px;padding:5px 12px;
-      backdrop-filter:blur(12px);
       box-shadow:0 0 16px rgba(79,195,247,0.1),0 4px 16px rgba(0,0,0,0.6);
       white-space:nowrap;">
       <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.85);
@@ -326,10 +325,9 @@ function buildPinHTML(bar: BarWithStats, isSelected: boolean): string {
   return `<div style="text-align:center;cursor:pointer;user-select:none;
     font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
     <div style="
-      background:rgba(10,10,22,0.88);
+      background:rgba(10,10,22,0.92);
       border:1px solid ${borderColor};border-radius:6px;
       padding:4px 9px;margin-bottom:3px;
-      backdrop-filter:blur(10px);
       box-shadow:0 0 12px ${glowColor},0 3px 12px rgba(0,0,0,0.5);">
       <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.88);
         white-space:nowrap;letter-spacing:0.1px;margin-bottom:2px;">
@@ -410,8 +408,12 @@ export default function MapClient({ bars, onBarClick, selectedBarId }: Props) {
       zoom:    2,
       pitch:   0,
       bearing: 10,
-      maxZoom: 18,
+      maxZoom: 17,          // 18→17: 극단적 확대 방지
+      maxPitch: 60,         // 과도한 3D 각도 제한
       attributionControl: false,
+      // 성능 최적화
+      fadeDuration: 0,      // 타일 페이드인 비활성화
+      crossSourceCollisions: false,  // 소스 간 충돌 검사 비활성화
     });
 
     map.addControl(new mapboxgl.NavigationControl({ showCompass: true }), 'bottom-right');
@@ -443,24 +445,32 @@ export default function MapClient({ bars, onBarClick, selectedBarId }: Props) {
         setLabelStyle(map);
       });
 
-      // 3D 빌딩
+      // 3D 빌딩 — height ≥ 100m 랜드마크만 (렌더링 부하 최소화)
       map.addLayer({
         id: '3d-buildings',
         source: 'composite',
         'source-layer': 'building',
-        filter: ['==', 'extrude', 'true'],
+        filter: ['all',
+          ['==', 'extrude', 'true'],
+          ['>=', ['get', 'height'], 100],   // 약 25층 이상만
+        ],
         type: 'fill-extrusion',
-        minzoom: 14,
+        minzoom: 15,   // 더 가까이 와야 표시 (성능 개선)
         paint: {
           'fill-extrusion-color': [
             'interpolate', ['linear'], ['get', 'height'],
-            0, '#0f172a', 40, '#1e3a5f', 150, '#1e40af',
+            100, '#1e3a5f', 200, '#1e40af', 400, '#3b5bdb',
           ],
-          'fill-extrusion-height':  ['interpolate', ['linear'], ['zoom'], 14, 0, 14.05, ['get', 'height']],
-          'fill-extrusion-base':    ['interpolate', ['linear'], ['zoom'], 14, 0, 14.05, ['get', 'min_height']],
-          'fill-extrusion-opacity': 0.8,
+          'fill-extrusion-height':  ['interpolate', ['linear'], ['zoom'], 15, 0, 15.05, ['get', 'height']],
+          'fill-extrusion-base':    ['interpolate', ['linear'], ['zoom'], 15, 0, 15.05, ['get', 'min_height']],
+          'fill-extrusion-opacity': 0.75,
         },
       });
+
+      // flat 빌딩 레이어 숨기기 (렌더링 절감)
+      for (const id of ['building', 'building-outline']) {
+        try { map.setLayoutProperty(id, 'visibility', 'none'); } catch { /* skip */ }
+      }
 
       // 인트로 비행 타이머 (ID 저장 → 스킵 시 취소 가능)
       const t1 = setTimeout(() => {
