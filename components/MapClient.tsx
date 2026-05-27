@@ -606,21 +606,27 @@ function buildPinHTML(bar: BarWithStats, isSelected: boolean): string {
   const shortName = displayName.length > 9 ? displayName.slice(0, 8) + '…' : displayName;
   const labelBorder = isSelected ? 'rgba(251,191,36,0.65)' : `${accent}50`;
 
-  // 라벨(위) → 글라스 SVG(아래) 순서로 쌓아야
-  // anchor:bottom 기준으로 SVG 바닥 그림자가 정확히 지도 좌표에 닿음
+  const ringClass   = isSelected ? 'hon-ring hon-ring-sel'   : 'hon-ring';
+  const ringClassB  = isSelected ? 'hon-ring hon-ring-sel-b' : 'hon-ring hon-ring-b';
+  const glowPx      = isSelected ? '7px' : '4px';
+  const glowAlpha   = isSelected ? 'bb' : '70';
+
+  // 구조: [라벨] → [glow 래핑 글라스] → [비콘 0-height div]
+  // anchor:bottom → 0-height div 바닥 = 지도 좌표 = 펄스 링 중심
   return `<div style="
+    position:relative;
     display:flex;flex-direction:column;align-items:center;
     cursor:pointer;user-select:none;
     font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
-    <!-- 정보 라벨 (소형 · 반투명) -->
+    <!-- 정보 라벨 -->
     <div style="
-      background:rgba(5,8,20,0.82);
+      background:rgba(5,8,20,0.88);
       border:1px solid ${labelBorder};
       border-radius:4px;padding:2px 6px 1px;
       margin-bottom:1px;
-      box-shadow:0 1px 6px rgba(0,0,0,0.5);
+      box-shadow:0 1px 8px rgba(0,0,0,0.5),0 0 10px ${accent}28;
       white-space:nowrap;">
-      <div style="font-size:8px;font-weight:700;color:rgba(255,255,255,0.85);
+      <div style="font-size:8px;font-weight:700;color:rgba(255,255,255,0.9);
         letter-spacing:0.1px;margin-bottom:1px;">${shortName}</div>
       <div style="display:flex;gap:4px;justify-content:center;align-items:center;">
         <span style="font-size:7.5px;color:#93c5fd;font-weight:600;">♂${male}</span>
@@ -629,8 +635,28 @@ function buildPinHTML(bar: BarWithStats, isSelected: boolean): string {
           background:${occ.color};flex-shrink:0;"></span>
       </div>
     </div>
-    <!-- 아이소메트릭 글라스 (SVG 바닥 그림자가 지도 지면) -->
-    ${glassSVG}
+    <!-- 글라스 (accent glow) -->
+    <div style="filter:drop-shadow(0 0 ${glowPx} ${accent}${glowAlpha});">
+      ${glassSVG}
+    </div>
+    <!-- 비콘 (지도 좌표 지점 · anchor:bottom 기준) -->
+    <div style="position:relative;height:0;width:0;">
+      <!-- 펄스 링 2개 (엇갈리게 방사) -->
+      <div class="${ringClass}" style="
+        position:absolute;width:18px;height:18px;
+        left:-9px;top:-9px;
+        border:1.5px solid ${accent};"></div>
+      <div class="${ringClassB}" style="
+        position:absolute;width:18px;height:18px;
+        left:-9px;top:-9px;
+        border:1.5px solid ${accent};"></div>
+      <!-- 중심 빛점 -->
+      <div style="
+        position:absolute;width:5px;height:5px;
+        left:-2.5px;top:-2.5px;border-radius:50%;
+        background:${accent};
+        box-shadow:0 0 8px ${accent},0 0 16px ${accent}60;"></div>
+    </div>
   </div>`;
 }
 
@@ -652,6 +678,7 @@ export default function MapClient({ bars, onBarClick, selectedBarId }: Props) {
   useEffect(() => {
     const s = document.createElement('style');
     s.textContent = `
+      /* 팝업 스타일 */
       .hon-popup .mapboxgl-popup-content {
         background: transparent !important;
         box-shadow: none !important;
@@ -672,6 +699,21 @@ export default function MapClient({ bars, onBarClick, selectedBarId }: Props) {
         color: rgba(255,255,255,0.85) !important;
         background: none !important;
       }
+
+      /* 비콘 펄스 링 */
+      @keyframes hon-pulse {
+        0%   { transform: scale(0.4); opacity: 0.8; }
+        100% { transform: scale(3.6); opacity: 0;   }
+      }
+      .hon-ring {
+        position: absolute;
+        border-radius: 50%;
+        animation: hon-pulse 2.4s cubic-bezier(0.3,0,0.7,1) infinite;
+        pointer-events: none;
+      }
+      .hon-ring-b { animation-delay: 1.2s; }
+      .hon-ring-sel { animation-duration: 1.5s; }
+      .hon-ring-sel-b { animation-delay: 0.75s; animation-duration: 1.5s; }
     `;
     document.head.appendChild(s);
     return () => { document.head.removeChild(s); };
