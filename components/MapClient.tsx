@@ -601,7 +601,9 @@ function buildPinHTML(bar: BarWithStats, isSelected: boolean): string {
   const glassType = getGlassType(bar.name);
   const accent    = getChainColor(bar.name);
   const glassSVG  = buildGlassSVG(glassType, accent, isSelected);
-  const shortName = bar.name.length > 9 ? bar.name.slice(0, 8) + '…' : bar.name;
+  // 마커 라벨에서만 "혼술바" 제거 (팝업은 원래 이름 유지)
+  const displayName = bar.name.replace(/혼술바/g, '').trim();
+  const shortName = displayName.length > 9 ? displayName.slice(0, 8) + '…' : displayName;
   const labelBorder = isSelected ? 'rgba(251,191,36,0.65)' : `${accent}50`;
 
   // 라벨(위) → 글라스 SVG(아래) 순서로 쌓아야
