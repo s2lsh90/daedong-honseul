@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
@@ -91,7 +91,7 @@ function getOccupancyColor(total: number, capacity: number) {
   return           { color: '#f87171', label: '혼잡' };
 }
 
-// ── 한국어 레이블 (최초 style.load 시 1회) ────────────────────────────
+// ── 한국어 레이블 ─────────────────────────────────────────────────────
 function setKorean(map: mapboxgl.Map) {
   try {
     for (const layer of map.getStyle().layers) {
@@ -105,40 +105,105 @@ function setKorean(map: mapboxgl.Map) {
   } catch { /* skip */ }
 }
 
-// ── 타일 색상 (UI #08081a 팔레트와 통일) ─────────────────────────────
+// ── 타일 기본 색상 (UI #08081a 팔레트 통일) ──────────────────────────
 function setTileColors(map: mapboxgl.Map) {
-  const pairs: [string, string][] = [
-    ['land',                     'background-color:#08081a'],
-    ['land-structure',           'background-color:#08081a'],
-    ['landcover',                'fill-color:#08081a'],
-    ['landuse',                  'fill-color:#0c0c1e'],
-    ['landuse-residential',      'fill-color:#0c0c1e'],
-    ['national-park',            'fill-color:#0b1710'],
-    ['landuse_overlay',          'fill-color:#0b1710'],
-    ['water',                    'fill-color:#070f1c'],
-    ['water-depth',              'fill-color:#060d18'],
-    ['waterway',                 'line-color:#0a1525'],
-    ['waterway-shadow',          'line-color:#0a1525'],
-    ['road-motorway-trunk',      'line-color:#141e32'],
-    ['road-primary',             'line-color:#111828'],
-    ['road-secondary-tertiary',  'line-color:#0e1520'],
-    ['road-street',              'line-color:#0d1320'],
-    ['road-local',               'line-color:#0b1020'],
-    ['road-pedestrian',          'line-color:#0d1220'],
-    ['road-minor',               'line-color:#0b1020'],
-    ['road-motorway-trunk-case', 'line-color:#0a1028'],
-    ['road-primary-case',        'line-color:#0a1028'],
-    ['building',                 'fill-color:#0d1220'],
-    ['building-outline',         'line-color:#111828'],
-    ['aeroway-polygon',          'fill-color:#0b0f1a'],
-    ['aeroway-line',             'line-color:#131c2e'],
-    ['tunnel-motorway-trunk',    'line-color:#0d1528'],
-    ['tunnel-primary',           'line-color:#0c1325'],
+  const pairs: [string, string, string][] = [
+    ['land',                     'background-color', '#08081a'],
+    ['land-structure',           'background-color', '#08081a'],
+    ['landcover',                'fill-color',       '#08081a'],
+    ['landuse',                  'fill-color',       '#0c0c1e'],
+    ['landuse-residential',      'fill-color',       '#0c0c1e'],
+    ['national-park',            'fill-color',       '#0b1710'],
+    ['landuse_overlay',          'fill-color',       '#0b1710'],
+    ['water',                    'fill-color',       '#070f1c'],
+    ['water-depth',              'fill-color',       '#060d18'],
+    ['waterway',                 'line-color',       '#0a1525'],
+    ['waterway-shadow',          'line-color',       '#0a1525'],
+    ['road-motorway-trunk',      'line-color',       '#141e32'],
+    ['road-primary',             'line-color',       '#111828'],
+    ['road-secondary-tertiary',  'line-color',       '#0e1520'],
+    ['road-street',              'line-color',       '#0d1320'],
+    ['road-local',               'line-color',       '#0b1020'],
+    ['road-pedestrian',          'line-color',       '#0d1220'],
+    ['road-minor',               'line-color',       '#0b1020'],
+    ['road-motorway-trunk-case', 'line-color',       '#0a1028'],
+    ['road-primary-case',        'line-color',       '#0a1028'],
+    ['building',                 'fill-color',       '#0d1220'],
+    ['building-outline',         'line-color',       '#111828'],
+    ['aeroway-polygon',          'fill-color',       '#0b0f1a'],
+    ['aeroway-line',             'line-color',       '#131c2e'],
+    ['tunnel-motorway-trunk',    'line-color',       '#0d1528'],
+    ['tunnel-primary',           'line-color',       '#0c1325'],
   ];
-  for (const [id, propVal] of pairs) {
-    const [prop, color] = propVal.split(':') as [string, string];
+  for (const [id, prop, color] of pairs) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     try { map.setPaintProperty(id, prop as any, color); } catch { /* skip */ }
+  }
+}
+
+/**
+ * 지하철 노선 강조 + 불필요한 POI 정리
+ * 노선: UI 시안(#4fc3f7) 계열, 부드러운 두께
+ * POI: 지하철역·공항·병원 등 핵심 시설만 유지
+ */
+function setTransitStyle(map: mapboxgl.Map) {
+  // ── 철도/지하철 노선 강조 ──
+  const TRANSIT_COLOR = '#4fc3f7';   // UI 시안 그대로
+  const TRANSIT_OPACITY = 0.55;      // 너무 강하지 않게
+
+  const railPaint: [string, string, unknown][] = [
+    ['line-color',   'string',     TRANSIT_COLOR],
+    ['line-opacity', 'number',     TRANSIT_OPACITY],
+    ['line-width',   'expression', ['interpolate', ['linear'], ['zoom'],
+      10, 1.5,
+      12, 2.0,
+      14, 2.8,
+      16, 3.5,
+    ]],
+    ['line-blur',    'number',     0],
+  ];
+
+  const railLayers = [
+    'road-rail',
+    'road-rail-tracks',
+    'transit-line',
+    'rail',
+  ];
+
+  for (const layerId of railLayers) {
+    for (const [prop,, val] of railPaint) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      try { map.setPaintProperty(layerId, prop as any, val); } catch { /* skip */ }
+    }
+  }
+
+  // 지하철역 아이콘/레이블 (transit-label) — 크기 살짝 키우기
+  try { map.setLayoutProperty('transit-label', 'text-size', 11); } catch {}
+  try { map.setLayoutProperty('transit-label', 'icon-size',
+    ['interpolate', ['linear'], ['zoom'], 12, 0.8, 15, 1.1]
+  ); } catch {}
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  try { map.setPaintProperty('transit-label', 'text-color' as any, 'rgba(255,255,255,0.75)'); } catch {}
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  try { map.setPaintProperty('transit-label', 'text-halo-color' as any, 'rgba(8,8,26,0.9)'); } catch {}
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  try { map.setPaintProperty('transit-label', 'text-halo-width' as any, 1.5); } catch {}
+
+  // ── POI 정리: 지하철역·공항·병원만 표시, 나머지 숨김 ──
+  try {
+    map.setFilter('poi-label', [
+      'match', ['get', 'maki'],
+      ['rail', 'rail-metro', 'rail-light', 'subway', 'bus', 'airport', 'hospital', 'heliport'],
+      true, false,
+    ]);
+  } catch { /* skip */ }
+
+  // 불필요 레이어 숨기기
+  const hideLayers = [
+    'building-number-label',    // 건물 번호
+  ];
+  for (const id of hideLayers) {
+    try { map.setLayoutProperty(id, 'visibility', 'none'); } catch { /* skip */ }
   }
 }
 
@@ -223,14 +288,39 @@ export default function MapClient({ bars, onBarClick, selectedBarId }: Props) {
   const mapRef          = useRef<mapboxgl.Map | null>(null);
   const markersRef      = useRef<mapboxgl.Marker[]>([]);
 
+  // 인트로 관련 refs
+  const mapReadyRef     = useRef(false);
+  const introTimersRef  = useRef<ReturnType<typeof setTimeout>[]>([]);
+
   // 줌은 ref로 관리 → 매 프레임 React 리렌더 방지
   const zoomRef         = useRef(11);
-  // 클러스터 전환 여부만 state로 관리 (임계값 통과 시에만 리렌더)
   const isClusteredRef  = useRef(true);
   const [isClustered,   setIsClustered]  = useState(true);
-
   const [mapReady,      setMapReady]     = useState(false);
   const [introText,     setIntroText]    = useState('지구를 탐색 중...');
+
+  // ── 인트로 스킵 (클릭/탭 시 즉시 서울 이동) ─────────────────────────
+  const skipIntro = useCallback(() => {
+    if (mapReadyRef.current || !mapRef.current) return;
+    // 예약된 타이머 모두 취소
+    introTimersRef.current.forEach(clearTimeout);
+    introTimersRef.current = [];
+    // 애니메이션 즉시 중단 후 서울로 점프
+    mapRef.current.stop();
+    mapRef.current.jumpTo({
+      center:  [INIT_LNG, INIT_LAT],
+      zoom:    11,
+      pitch:   45,
+      bearing: -10,
+    });
+    mapRef.current.setMinZoom(10);
+    // 상태 업데이트
+    mapReadyRef.current    = true;
+    zoomRef.current        = 11;
+    isClusteredRef.current = false;
+    setMapReady(true);
+    setIsClustered(false);
+  }, []);
 
   // ── 지도 초기화 ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -243,15 +333,19 @@ export default function MapClient({ bars, onBarClick, selectedBarId }: Props) {
       style: 'mapbox://styles/mapbox/dark-v11',
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       projection: 'globe' as any,
-      center: [126.0, 30.0],   // 우주에서 시작
-      zoom: 2,                  // minZoom 없이 → 지구본 보임
-      pitch: 0,
+      center:  [126.0, 30.0],
+      zoom:    2,
+      pitch:   0,
       bearing: 10,
       maxZoom: 18,
       attributionControl: false,
     });
 
     map.addControl(new mapboxgl.NavigationControl({ showCompass: true }), 'bottom-right');
+
+    // 인트로 중 클릭/터치 → 즉시 스킵
+    map.on('click',      skipIntro);
+    map.on('touchstart', skipIntro);
 
     map.on('load', () => {
       // 우주 대기권 + 별
@@ -264,10 +358,15 @@ export default function MapClient({ bars, onBarClick, selectedBarId }: Props) {
         'star-intensity': 0.85,
       });
 
-      // 한국어 + 타일 색상 — style.load 시에만 (styledata 대신)
+      // 스타일 적용 (style.load 시에만 재실행)
       setKorean(map);
       setTileColors(map);
-      map.on('style.load', () => { setKorean(map); setTileColors(map); });
+      setTransitStyle(map);
+      map.on('style.load', () => {
+        setKorean(map);
+        setTileColors(map);
+        setTransitStyle(map);
+      });
 
       // 3D 빌딩
       map.addLayer({
@@ -288,27 +387,32 @@ export default function MapClient({ bars, onBarClick, selectedBarId }: Props) {
         },
       });
 
-      // 지구본 → 서울 인트로 비행
-      setTimeout(() => {
+      // 인트로 비행 타이머 (ID 저장 → 스킵 시 취소 가능)
+      const t1 = setTimeout(() => {
         setIntroText('서울로 이동 중...');
         map.flyTo({
-          center: [INIT_LNG, INIT_LAT],
-          zoom: 11, pitch: 45, bearing: -10,
-          duration: 5500, curve: 1.8, essential: true,
+          center:   [INIT_LNG, INIT_LAT],
+          zoom:     11,
+          pitch:    45,
+          bearing:  -10,
+          duration: 5500,
+          curve:    1.8,
+          essential: true,
         });
       }, 1200);
 
-      // 인트로 종료 타이밍 = 딜레이 + flyTo 시간 + 여유 300ms
-      setTimeout(() => {
+      const t2 = setTimeout(() => {
+        if (mapReadyRef.current) return; // 이미 스킵됐으면 무시
         map.setMinZoom(10);
-        setMapReady(true);
-        // 초기 클러스터 상태 설정
-        const z = map.getZoom();
-        zoomRef.current = z;
-        const c = z < CLUSTER_ZOOM;
+        mapReadyRef.current    = true;
+        zoomRef.current        = map.getZoom();
+        const c = zoomRef.current < CLUSTER_ZOOM;
         isClusteredRef.current = c;
+        setMapReady(true);
         setIsClustered(c);
       }, 1200 + 5500 + 300);
+
+      introTimersRef.current = [t1, t2];
     });
 
     // 줌 변경 시 클러스터 임계값 교차 시에만 state 업데이트
@@ -324,9 +428,9 @@ export default function MapClient({ bars, onBarClick, selectedBarId }: Props) {
 
     mapRef.current = map;
     return () => { map.remove(); mapRef.current = null; };
-  }, []);
+  }, [skipIntro]);
 
-  // ── 마커 업데이트 — isClustered 변경 시에만 전체 재생성 ──────────────
+  // ── 마커 업데이트 ─────────────────────────────────────────────────────
   useEffect(() => {
     if (!mapReady || !mapRef.current) return;
     const map = mapRef.current;
@@ -349,12 +453,9 @@ export default function MapClient({ bars, onBarClick, selectedBarId }: Props) {
       });
     } else {
       bars.forEach(bar => {
-        const isSelected = bar.id === selectedBarId;
-        // el: Mapbox가 transform으로 위치 잡는 루트 → 절대 transform 건드리면 안 됨
-        // inner: scale 애니메이션은 이 래퍼에만 적용
-        const el = document.createElement('div');
+        const el    = document.createElement('div');
         const inner = document.createElement('div');
-        inner.innerHTML = buildPinHTML(bar, isSelected);
+        inner.innerHTML = buildPinHTML(bar, bar.id === selectedBarId);
         inner.style.transition = 'transform 0.12s';
         el.appendChild(inner);
         el.addEventListener('click', () => onBarClick(bar.id));
@@ -368,17 +469,16 @@ export default function MapClient({ bars, onBarClick, selectedBarId }: Props) {
     }
   }, [bars, selectedBarId, onBarClick, mapReady, isClustered]);
 
-  // ── 선택 상태 변경 시 핀만 갱신 (전체 재생성 없이) ─────────────────
+  // ── 선택 상태 변경 시 핀만 갱신 ──────────────────────────────────────
   useEffect(() => {
     if (!mapReady || isClustered || !mapRef.current) return;
     const map = mapRef.current;
     markersRef.current.forEach(m => m.remove());
     markersRef.current = [];
     bars.forEach(bar => {
-      const isSelected = bar.id === selectedBarId;
-      const el = document.createElement('div');
+      const el    = document.createElement('div');
       const inner = document.createElement('div');
-      inner.innerHTML = buildPinHTML(bar, isSelected);
+      inner.innerHTML = buildPinHTML(bar, bar.id === selectedBarId);
       inner.style.transition = 'transform 0.12s';
       el.appendChild(inner);
       el.addEventListener('click', () => onBarClick(bar.id));
@@ -389,7 +489,6 @@ export default function MapClient({ bars, onBarClick, selectedBarId }: Props) {
           .setLngLat([bar.lng, bar.lat]).addTo(map),
       );
     });
-  // selectedBarId 변경 시에만 별도로 실행
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedBarId]);
 
@@ -415,18 +514,25 @@ export default function MapClient({ bars, onBarClick, selectedBarId }: Props) {
         </div>
       )}
 
-      {/* 인트로 오버레이 */}
+      {/* 인트로 오버레이 — 클릭하면 즉시 스킵 */}
       {!mapReady && (
         <div
-          className="absolute inset-0 z-[400] flex flex-col items-center justify-end pb-16 pointer-events-none"
-          style={{ background: 'linear-gradient(to top, rgba(8,8,26,0.85) 0%, transparent 50%)' }}
+          className="absolute inset-0 z-[400] flex flex-col items-center justify-end pb-14 cursor-pointer select-none"
+          style={{ background: 'linear-gradient(to top, rgba(8,8,26,0.88) 0%, transparent 55%)' }}
+          onClick={skipIntro}
         >
-          <div className="flex items-center gap-3">
-            <div className="w-2 h-2 rounded-full animate-pulse"
-              style={{ background: '#4fc3f7', boxShadow: '0 0 8px #4fc3f7' }} />
-            <span className="text-sm font-medium"
-              style={{ color: 'rgba(255,255,255,0.7)', letterSpacing: '0.5px' }}>
-              {introText}
+          <div className="flex flex-col items-center gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-2 h-2 rounded-full animate-pulse"
+                style={{ background: '#4fc3f7', boxShadow: '0 0 8px #4fc3f7' }} />
+              <span className="text-sm font-medium"
+                style={{ color: 'rgba(255,255,255,0.75)', letterSpacing: '0.5px' }}>
+                {introText}
+              </span>
+            </div>
+            {/* 스킵 힌트 */}
+            <span className="text-xs" style={{ color: 'rgba(255,255,255,0.28)', letterSpacing: '0.3px' }}>
+              탭하면 바로 이동
             </span>
           </div>
         </div>
