@@ -142,68 +142,141 @@ function setTileColors(map: mapboxgl.Map) {
 }
 
 /**
- * 지하철 노선 강조 + 불필요한 POI 정리
- * 노선: UI 시안(#4fc3f7) 계열, 부드러운 두께
- * POI: 지하철역·공항·병원 등 핵심 시설만 유지
+ * 서울 지하철 각 노선 형광색 + glow 2겹 레이어
+ * - 기존 road-rail 계열 숨기고 composite road 소스 직접 스타일링
+ * - name_ko로 호선 매칭 → 각 호선 고유 형광색 / 미매칭 시 UI 시안 폴백
  */
 function setTransitStyle(map: mapboxgl.Map) {
-  // ── 철도/지하철 노선 강조 ──
-  const TRANSIT_COLOR = '#4fc3f7';   // UI 시안 그대로
-  const TRANSIT_OPACITY = 0.55;      // 너무 강하지 않게
-
-  const railPaint: [string, string, unknown][] = [
-    ['line-color',   'string',     TRANSIT_COLOR],
-    ['line-opacity', 'number',     TRANSIT_OPACITY],
-    ['line-width',   'expression', ['interpolate', ['linear'], ['zoom'],
-      10, 1.5,
-      12, 2.0,
-      14, 2.8,
-      16, 3.5,
-    ]],
-    ['line-blur',    'number',     0],
-  ];
-
-  const railLayers = [
-    'road-rail',
-    'road-rail-tracks',
-    'transit-line',
-    'rail',
-  ];
-
-  for (const layerId of railLayers) {
-    for (const [prop,, val] of railPaint) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      try { map.setPaintProperty(layerId, prop as any, val); } catch { /* skip */ }
-    }
+  // 기존 레이어 숨기기 (새 레이어로 대체)
+  for (const id of ['road-rail', 'road-rail-tracks', 'transit-line']) {
+    try { map.setLayoutProperty(id, 'visibility', 'none'); } catch { /* skip */ }
   }
 
-  // 지하철역 아이콘/레이블 (transit-label) — 크기 살짝 키우기
-  try { map.setLayoutProperty('transit-label', 'text-size', 11); } catch {}
-  try { map.setLayoutProperty('transit-label', 'icon-size',
-    ['interpolate', ['linear'], ['zoom'], 12, 0.8, 15, 1.1]
-  ); } catch {}
+  // ── 호선별 형광색 expression ──
+  const lineColor = [
+    'match',
+    ['coalesce', ['get', 'name_ko'], ['get', 'name'], ''],
+    '1호선',        '#3d8fff',   // 네이비 블루
+    '수도권 1호선', '#3d8fff',
+    '2호선',        '#00d95f',   // 초록
+    '수도권 2호선', '#00d95f',
+    '3호선',        '#ff922b',   // 주황
+    '수도권 3호선', '#ff922b',
+    '4호선',        '#00d4ff',   // 하늘
+    '수도권 4호선', '#00d4ff',
+    '5호선',        '#b366e0',   // 보라
+    '수도권 5호선', '#b366e0',
+    '6호선',        '#e08833',   // 갈색
+    '수도권 6호선', '#e08833',
+    '7호선',        '#a8c200',   // 올리브
+    '수도권 7호선', '#a8c200',
+    '8호선',        '#ff2d78',   // 핑크
+    '수도권 8호선', '#ff2d78',
+    '9호선',        '#d4c0a0',   // 골드
+    '수도권 9호선', '#d4c0a0',
+    '신분당선',     '#e8174a',   // 빨강
+    '분당선',       '#ffc200',   // 황금
+    '수인분당선',   '#ffc200',
+    '수인·분당선',  '#ffc200',
+    '경의중앙선',   '#7fd4b4',   // 민트
+    '공항철도',     '#00a8f0',   // 파랑
+    '인천공항철도', '#00a8f0',
+    '경춘선',       '#10c8a0',   // 청록
+    '우이신설선',   '#b8c84a',   // 연두
+    '#4fc3f7',                   // 폴백 — UI 시안
+  ] as mapboxgl.Expression;
+
+  const railFilter = [
+    'match', ['get', 'class'],
+    ['major_rail', 'minor_rail', 'service_rail', 'rail'],
+    true, false,
+  ] as mapboxgl.FilterSpecification;
+
+  // transit-label 위에 겹치지 않도록 그 아래에 삽입
+  const insertBefore = map.getLayer('transit-label') ? 'transit-label'
+    : map.getLayer('road-label') ? 'road-label'
+    : undefined;
+
+  // glow 레이어 — 넓고 흐릿 (네온 느낌)
+  if (!map.getLayer('transit-glow')) {
+    try {
+      map.addLayer({
+        id: 'transit-glow',
+        type: 'line',
+        source: 'composite',
+        'source-layer': 'road',
+        filter: railFilter,
+        paint: {
+          'line-color': lineColor,
+          'line-width': ['interpolate', ['linear'], ['zoom'], 10, 8, 14, 14] as mapboxgl.Expression,
+          'line-opacity': 0.13,
+          'line-blur': 7,
+        },
+      }, insertBefore);
+    } catch { /* skip */ }
+  }
+
+  // main 레이어 — 선명한 노선 선
+  if (!map.getLayer('transit-lines')) {
+    try {
+      map.addLayer({
+        id: 'transit-lines',
+        type: 'line',
+        source: 'composite',
+        'source-layer': 'road',
+        filter: railFilter,
+        paint: {
+          'line-color': lineColor,
+          'line-width': ['interpolate', ['linear'], ['zoom'], 10, 1.5, 12, 2.0, 14, 2.8, 16, 3.5] as mapboxgl.Expression,
+          'line-opacity': 0.75,
+        },
+      }, insertBefore);
+    } catch { /* skip */ }
+  }
+
+  // 지하철역 레이블 강화
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  try { map.setPaintProperty('transit-label', 'text-color' as any, 'rgba(255,255,255,0.75)'); } catch {}
+  try { map.setPaintProperty('transit-label', 'text-color' as any, 'rgba(255,255,255,0.82)'); } catch {}
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  try { map.setPaintProperty('transit-label', 'text-halo-color' as any, 'rgba(8,8,26,0.9)'); } catch {}
+  try { map.setPaintProperty('transit-label', 'text-halo-color' as any, 'rgba(8,8,26,0.95)'); } catch {}
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   try { map.setPaintProperty('transit-label', 'text-halo-width' as any, 1.5); } catch {}
+}
 
-  // ── POI 정리: 지하철역·공항·병원만 표시, 나머지 숨김 ──
+/**
+ * 레이블 정리
+ * - place-label: 동(neighbourhood)·구(suburb)·시(city) 수준만 표시
+ * - poi-label: 전부 숨김 (건물명·상점명 등 노이즈 제거)
+ */
+function setLabelStyle(map: mapboxgl.Map) {
+  // 동 / 구 / 시 지명만 표시
   try {
-    map.setFilter('poi-label', [
-      'match', ['get', 'maki'],
-      ['rail', 'rail-metro', 'rail-light', 'subway', 'bus', 'airport', 'hospital', 'heliport'],
+    map.setFilter('place-label', [
+      'match', ['get', 'class'],
+      ['neighbourhood', 'suburb', 'district', 'city', 'town'],
       true, false,
     ]);
   } catch { /* skip */ }
 
-  // 불필요 레이어 숨기기
-  const hideLayers = [
-    'building-number-label',    // 건물 번호
-  ];
-  for (const id of hideLayers) {
-    try { map.setLayoutProperty(id, 'visibility', 'none'); } catch { /* skip */ }
+  // 지명 텍스트 색상 계층화
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  try { map.setPaintProperty('place-label', 'text-color' as any, [
+    'match', ['get', 'class'],
+    ['city'],              'rgba(255,255,255,0.80)',
+    ['suburb', 'district'],'rgba(255,255,255,0.58)',
+    'rgba(255,255,255,0.42)',
+  ]); } catch {}
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  try { map.setPaintProperty('place-label', 'text-halo-color' as any, 'rgba(8,8,26,0.9)'); } catch {}
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  try { map.setPaintProperty('place-label', 'text-halo-width' as any, 1.2); } catch {}
+
+  // POI 전부 숨기기 (상점·음식점·건물명)
+  try { map.setLayoutProperty('poi-label', 'visibility', 'none'); } catch {}
+
+  // 기타 불필요 레이블
+  for (const id of ['building-number-label', 'gate-label', 'address-label']) {
+    try { map.setLayoutProperty(id, 'visibility', 'none'); } catch {}
   }
 }
 
@@ -362,10 +435,12 @@ export default function MapClient({ bars, onBarClick, selectedBarId }: Props) {
       setKorean(map);
       setTileColors(map);
       setTransitStyle(map);
+      setLabelStyle(map);
       map.on('style.load', () => {
         setKorean(map);
         setTileColors(map);
         setTransitStyle(map);
+        setLabelStyle(map);
       });
 
       // 3D 빌딩
