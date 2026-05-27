@@ -611,6 +611,14 @@ function buildPinHTML(bar: BarWithStats, isSelected: boolean): string {
   const glowPx      = isSelected ? '7px' : '4px';
   const glowAlpha   = isSelected ? 'bb' : '70';
 
+  // 중심 빛점: 체크인 인원에 비례해 크기·glow 조정
+  // 0명 → 4px, 5명 → ~8px, 10명+ → 12px (최대)
+  const total       = male + female;
+  const dotSize     = Math.round(Math.min(4 + total * 0.8, 12));
+  const dotOffset   = -Math.round(dotSize / 2);
+  const dotGlow1    = dotSize + 3;
+  const dotGlow2    = dotSize * 3;
+
   // 구조: [라벨] → [glow 래핑 글라스] → [비콘 0-height div]
   // anchor:bottom → 0-height div 바닥 = 지도 좌표 = 펄스 링 중심
   return `<div style="
@@ -650,12 +658,15 @@ function buildPinHTML(bar: BarWithStats, isSelected: boolean): string {
         position:absolute;width:18px;height:18px;
         left:-9px;top:-9px;
         border:1.5px solid ${accent};"></div>
-      <!-- 중심 빛점 -->
+      <!-- 중심 빛점 (체크인 인원수에 비례해 커짐) -->
       <div style="
-        position:absolute;width:5px;height:5px;
-        left:-2.5px;top:-2.5px;border-radius:50%;
+        position:absolute;
+        width:${dotSize}px;height:${dotSize}px;
+        left:${dotOffset}px;top:${dotOffset}px;
+        border-radius:50%;
         background:${accent};
-        box-shadow:0 0 8px ${accent},0 0 16px ${accent}60;"></div>
+        box-shadow:0 0 ${dotGlow1}px ${accent},0 0 ${dotGlow2}px ${accent}60;
+        transition:width 0.4s,height 0.4s,box-shadow 0.4s;"></div>
     </div>
   </div>`;
 }
