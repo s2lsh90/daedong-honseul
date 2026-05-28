@@ -898,7 +898,13 @@ function setLabelStyle(map: mapboxgl.Map) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   try { map.setPaintProperty('place-label', 'text-halo-width' as any, 1.2); } catch {}
   try { map.setLayoutProperty('poi-label', 'visibility', 'none'); } catch {}
-  for (const id of ['building-number-label', 'gate-label', 'address-label']) {
+  // 도로명 레이블 전체 숨김
+  for (const id of [
+    'road-label', 'road-label-simple', 'road-label-navigation',
+    'road-number-shield', 'road-exit-shield',
+    'building-number-label', 'gate-label', 'address-label',
+    'motorway-junction',
+  ]) {
     try { map.setLayoutProperty(id, 'visibility', 'none'); } catch {}
   }
 }
