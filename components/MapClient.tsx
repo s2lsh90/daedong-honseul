@@ -443,43 +443,47 @@ const STATION_GEOJSON: GeoJSON.FeatureCollection = {
   })),
 };
 
-// ── 주요 랜드마크 GeoJSON (황금색 마커) ──────────────────────────────
+// ── 주요 랜드마크 GeoJSON — 카테고리별 Mapbox Maki 아이콘 + 컬러 ──────
+// icon: Mapbox Maki 아이콘 이름 (SDF 방식 → icon-color 로 자유롭게 채색)
+// cat : 카테고리 (컬러 분류용)
 const LANDMARK_GEOJSON: GeoJSON.FeatureCollection = {
   type: 'FeatureCollection',
   features: ([
+    // [coords, name, maki-icon, category]
     // 궁궐 / 역사
-    [[126.9770,37.5796],'경복궁'],
-    [[126.9910,37.5794],'창덕궁'],
-    [[126.9748,37.5659],'덕수궁'],
-    [[126.9941,37.5749],'종묘'],
-    [[126.9769,37.5860],'청와대'],
-    [[126.9853,37.5825],'북촌한옥마을'],
+    [[126.9770,37.5796],'경복궁',       'castle',             'palace'],
+    [[126.9910,37.5794],'창덕궁',       'castle',             'palace'],
+    [[126.9748,37.5659],'덕수궁',       'castle',             'palace'],
+    [[126.9941,37.5749],'종묘',         'historic',           'palace'],
+    [[126.9769,37.5860],'청와대',       'town-hall',          'palace'],
+    [[126.9853,37.5825],'북촌한옥마을', 'attraction',         'palace'],
     // 타워 / 고층빌딩
-    [[126.9882,37.5512],'N서울타워'],
-    [[127.1024,37.5126],'롯데월드타워'],
-    [[126.9404,37.5201],'63빌딩'],
+    [[126.9882,37.5512],'N서울타워',    'monument',           'tower'],
+    [[127.1024,37.5126],'롯데월드타워', 'monument',           'tower'],
+    [[126.9404,37.5201],'63빌딩',       'monument',           'tower'],
     // 문화 / 복합시설
-    [[127.0096,37.5659],'동대문DDP'],
-    [[127.0588,37.5128],'COEX'],
-    [[126.9878,37.5636],'명동성당'],
-    [[127.0596,37.5155],'봉은사'],
-    [[126.9802,37.5240],'국립중앙박물관'],
-    [[127.0031,37.4814],'예술의전당'],
+    [[127.0096,37.5659],'동대문DDP',    'art-gallery',        'culture'],
+    [[127.0588,37.5128],'COEX',         'attraction',         'culture'],
+    [[126.9802,37.5240],'국립중앙박물관','museum',            'culture'],
+    [[127.0031,37.4814],'예술의전당',   'theatre',            'culture'],
+    [[126.9852,37.5741],'인사동',       'art-gallery',        'culture'],
+    // 종교
+    [[126.9878,37.5636],'명동성당',     'religious-christian','religion'],
+    [[127.0596,37.5155],'봉은사',       'place-of-worship',   'religion'],
     // 시장 / 거리
-    [[127.0059,37.5697],'광장시장'],
-    [[126.9769,37.5591],'남대문시장'],
-    [[126.9852,37.5741],'인사동'],
-    [[127.0228,37.5173],'가로수길'],
+    [[127.0059,37.5697],'광장시장',     'shop',               'market'],
+    [[126.9769,37.5591],'남대문시장',   'shop',               'market'],
+    [[127.0228,37.5173],'가로수길',     'shop',               'market'],
     // 공원 / 자연
-    [[127.0374,37.5446],'서울숲'],
-    [[126.9994,37.5126],'반포한강공원'],
-    [[126.9323,37.5228],'여의도한강공원'],
+    [[127.0374,37.5446],'서울숲',       'park',               'park'],
+    [[126.9994,37.5126],'반포한강공원', 'park',               'park'],
+    [[126.9323,37.5228],'여의도한강공원','park',              'park'],
     // 대학교
-    [[126.9368,37.5649],'연세대'],
-    [[127.0279,37.5895],'고려대'],
-  ] as [[number,number], string][]).map(([c,n]) => ({
+    [[126.9368,37.5649],'연세대',       'college',            'univ'],
+    [[127.0279,37.5895],'고려대',       'college',            'univ'],
+  ] as [[number,number], string, string, string][]).map(([c,n,icon,cat]) => ({
     type: 'Feature' as const,
-    properties: { n },
+    properties: { n, icon, cat },
     geometry: { type: 'Point' as const, coordinates: c as [number,number] },
   })),
 };
@@ -820,12 +824,26 @@ function setTransitStyle(map: mapboxgl.Map) {
   }
 }
 
-/** 주요 랜드마크 — 황금색 점 + 텍스트 */
+// 카테고리별 컬러 매핑 (Maki SDF 아이콘 채색용)
+const LANDMARK_CAT_COLOR: mapboxgl.Expression = [
+  'match', ['get', 'cat'],
+  'palace',   '#fbbf24', // 앰버 — 궁궐/역사
+  'tower',    '#38bdf8', // 스카이블루 — 타워/빌딩
+  'culture',  '#f472b6', // 핑크 — 문화시설
+  'religion', '#c084fc', // 보라 — 종교
+  'market',   '#fde047', // 레몬 — 시장/거리
+  'park',     '#4ade80', // 그린 — 공원
+  'univ',     '#fb923c', // 오렌지 — 대학
+  '#e2e8f0',             // default
+];
+
+/** 주요 랜드마크 — Mapbox Maki 아이콘 (SDF) + 카테고리별 컬러 */
 function setLandmarkStyle(map: mapboxgl.Map) {
   if (!map.getSource('landmarks')) {
     map.addSource('landmarks', { type: 'geojson', data: LANDMARK_GEOJSON });
   }
-  // glow 후광
+
+  // ① 후광 glow circle (카테고리 색)
   if (!map.getLayer('landmark-glow')) {
     try {
       map.addLayer({
@@ -834,50 +852,62 @@ function setLandmarkStyle(map: mapboxgl.Map) {
         source: 'landmarks',
         minzoom: 9,
         paint: {
-          'circle-radius': ['interpolate', ['linear'], ['zoom'], 9, 12, 14, 22] as mapboxgl.Expression,
-          'circle-color': '#f59e0b',
-          'circle-opacity': 0.07,
-          'circle-blur': 1.2,
+          'circle-radius': ['interpolate', ['linear'], ['zoom'], 9, 14, 14, 26] as mapboxgl.Expression,
+          'circle-color': LANDMARK_CAT_COLOR,
+          'circle-opacity': 0.08,
+          'circle-blur': 1.5,
         },
       });
     } catch { /* skip */ }
   }
-  // 아이콘 점
-  if (!map.getLayer('landmark-dots')) {
+
+  // ② 배경 원 (아이콘 뒤에 진한 원 — 가독성 향상)
+  if (!map.getLayer('landmark-bg')) {
     try {
       map.addLayer({
-        id: 'landmark-dots',
+        id: 'landmark-bg',
         type: 'circle',
         source: 'landmarks',
         minzoom: 9,
         paint: {
-          'circle-radius': ['interpolate', ['linear'], ['zoom'], 9, 3.5, 14, 5.5] as mapboxgl.Expression,
-          'circle-color': '#f59e0b',
-          'circle-stroke-color': '#08081a',
-          'circle-stroke-width': 1.5,
-          'circle-opacity': 0.92,
+          'circle-radius': ['interpolate', ['linear'], ['zoom'], 9, 9, 12, 12, 14, 15] as mapboxgl.Expression,
+          'circle-color': '#08081a',
+          'circle-stroke-color': LANDMARK_CAT_COLOR,
+          'circle-stroke-width': 1.8,
+          'circle-opacity': 0.85,
         },
       });
     } catch { /* skip */ }
   }
-  // 이름 레이블 (황금색)
-  if (!map.getLayer('landmark-labels')) {
+
+  // ③ Mapbox Maki 아이콘 (SDF → icon-color 로 카테고리별 채색)
+  if (!map.getLayer('landmark-icons')) {
     try {
       map.addLayer({
-        id: 'landmark-labels',
+        id: 'landmark-icons',
         type: 'symbol',
         source: 'landmarks',
         minzoom: 9,
         layout: {
+          'icon-image': ['get', 'icon'] as mapboxgl.Expression,
+          'icon-size': ['interpolate', ['linear'], ['zoom'], 9, 0.55, 12, 0.75, 14, 0.9] as mapboxgl.Expression,
+          'icon-allow-overlap': false,
+          'icon-ignore-placement': false,
+          // 아이콘 아래 이름 레이블
           'text-field': ['get', 'n'] as mapboxgl.Expression,
-          'text-size': ['interpolate', ['linear'], ['zoom'], 9, 9.5, 12, 11.5, 14, 13] as mapboxgl.Expression,
-          'text-offset': [0, 1.1] as [number, number],
+          'text-size': ['interpolate', ['linear'], ['zoom'], 9, 9, 12, 10.5, 14, 12.5] as mapboxgl.Expression,
+          'text-offset': [0, 1.5] as [number, number],
           'text-anchor': 'top',
           'text-allow-overlap': false,
           'text-ignore-placement': false,
         },
         paint: {
-          'text-color': '#fbbf24',
+          // SDF 아이콘 채색 (카테고리별)
+          'icon-color': LANDMARK_CAT_COLOR,
+          'icon-halo-color': 'rgba(4,4,18,0.8)',
+          'icon-halo-width': 1.5,
+          // 텍스트 (카테고리별)
+          'text-color': LANDMARK_CAT_COLOR,
           'text-halo-color': 'rgba(4,4,18,0.97)',
           'text-halo-width': 2.2,
         },
