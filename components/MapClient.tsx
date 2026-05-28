@@ -1217,24 +1217,51 @@ export default function MapClient({ bars, onBarClick, selectedBarId }: Props) {
         setLabelStyle(map);
       });
 
-      // 랜드마크 3D 빌딩 (height ≥ 100m)
+      // ── 랜드마크급 초고층 (150m+, 줌 11부터 — 롯데월드타워·N서울타워·63빌딩 등)
+      map.addLayer({
+        id: '3d-buildings-landmark',
+        source: 'composite',
+        'source-layer': 'building',
+        filter: ['all', ['==', 'extrude', 'true'], ['>=', ['get', 'height'], 150]],
+        type: 'fill-extrusion',
+        minzoom: 11,
+        paint: {
+          'fill-extrusion-color': [
+            'interpolate', ['linear'], ['get', 'height'],
+            150, '#1e3d8f',
+            250, '#2563eb',
+            400, '#3b82f6',
+            550, '#60a5fa',
+          ],
+          'fill-extrusion-height': ['interpolate', ['linear'], ['zoom'], 11, 0, 11.5, ['get', 'height']],
+          'fill-extrusion-base':   ['interpolate', ['linear'], ['zoom'], 11, 0, 11.5, ['get', 'min_height']],
+          'fill-extrusion-opacity': 0.95,
+        },
+      });
+
+      // ── 일반 3D 빌딩 (모든 건물, 줌 13부터 — 도시 전체가 입체적으로)
       map.addLayer({
         id: '3d-buildings',
         source: 'composite',
         'source-layer': 'building',
-        filter: ['all', ['==', 'extrude', 'true'], ['>=', ['get', 'height'], 100]],
+        filter: ['==', 'extrude', 'true'],
         type: 'fill-extrusion',
-        minzoom: 15,
+        minzoom: 13,
         paint: {
           'fill-extrusion-color': [
             'interpolate', ['linear'], ['get', 'height'],
-            100, '#1e3a5f', 200, '#1e40af', 400, '#3b5bdb',
+            0,   '#0c1220',
+            15,  '#101828',
+            40,  '#14203a',
+            80,  '#192c52',
+            150, '#1e3a70',
           ],
-          'fill-extrusion-height':  ['interpolate', ['linear'], ['zoom'], 15, 0, 15.05, ['get', 'height']],
-          'fill-extrusion-base':    ['interpolate', ['linear'], ['zoom'], 15, 0, 15.05, ['get', 'min_height']],
-          'fill-extrusion-opacity': 0.75,
+          'fill-extrusion-height': ['interpolate', ['linear'], ['zoom'], 13, 0, 13.5, ['get', 'height']],
+          'fill-extrusion-base':   ['interpolate', ['linear'], ['zoom'], 13, 0, 13.5, ['get', 'min_height']],
+          'fill-extrusion-opacity': 0.82,
         },
       });
+
       for (const id of ['building', 'building-outline']) {
         try { map.setLayoutProperty(id, 'visibility', 'none'); } catch { /* skip */ }
       }
