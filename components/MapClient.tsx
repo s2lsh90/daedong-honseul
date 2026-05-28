@@ -258,6 +258,47 @@ const STATION_GEOJSON: GeoJSON.FeatureCollection = {
   })),
 };
 
+// ── 주요 랜드마크 GeoJSON (황금색 마커) ──────────────────────────────
+const LANDMARK_GEOJSON: GeoJSON.FeatureCollection = {
+  type: 'FeatureCollection',
+  features: ([
+    // 궁궐 / 역사
+    [[126.9770,37.5796],'경복궁'],
+    [[126.9910,37.5794],'창덕궁'],
+    [[126.9748,37.5659],'덕수궁'],
+    [[126.9941,37.5749],'종묘'],
+    [[126.9769,37.5860],'청와대'],
+    [[126.9853,37.5825],'북촌한옥마을'],
+    // 타워 / 고층빌딩
+    [[126.9882,37.5512],'N서울타워'],
+    [[127.1024,37.5126],'롯데월드타워'],
+    [[126.9404,37.5201],'63빌딩'],
+    // 문화 / 복합시설
+    [[127.0096,37.5659],'동대문DDP'],
+    [[127.0588,37.5128],'COEX'],
+    [[126.9878,37.5636],'명동성당'],
+    [[127.0596,37.5155],'봉은사'],
+    [[126.9802,37.5240],'국립중앙박물관'],
+    [[127.0031,37.4814],'예술의전당'],
+    // 시장 / 거리
+    [[127.0059,37.5697],'광장시장'],
+    [[126.9769,37.5591],'남대문시장'],
+    [[126.9852,37.5741],'인사동'],
+    [[127.0228,37.5173],'가로수길'],
+    // 공원 / 자연
+    [[127.0374,37.5446],'서울숲'],
+    [[126.9994,37.5126],'반포한강공원'],
+    [[126.9323,37.5228],'여의도한강공원'],
+    // 대학교
+    [[126.9368,37.5649],'연세대'],
+    [[127.0279,37.5895],'고려대'],
+  ] as [[number,number], string][]).map(([c,n]) => ({
+    type: 'Feature' as const,
+    properties: { n },
+    geometry: { type: 'Point' as const, coordinates: c as [number,number] },
+  })),
+};
+
 // ── 지역 레이블 ───────────────────────────────────────────────────────
 const AREA_LABELS = [
   { name: '홍대',        lat: 37.5558, lng: 126.9236 },
@@ -594,6 +635,72 @@ function setTransitStyle(map: mapboxgl.Map) {
   }
 }
 
+/** 주요 랜드마크 — 황금색 점 + 텍스트 */
+function setLandmarkStyle(map: mapboxgl.Map) {
+  if (!map.getSource('landmarks')) {
+    map.addSource('landmarks', { type: 'geojson', data: LANDMARK_GEOJSON });
+  }
+  // glow 후광
+  if (!map.getLayer('landmark-glow')) {
+    try {
+      map.addLayer({
+        id: 'landmark-glow',
+        type: 'circle',
+        source: 'landmarks',
+        minzoom: 9,
+        paint: {
+          'circle-radius': ['interpolate', ['linear'], ['zoom'], 9, 12, 14, 22] as mapboxgl.Expression,
+          'circle-color': '#f59e0b',
+          'circle-opacity': 0.07,
+          'circle-blur': 1.2,
+        },
+      });
+    } catch { /* skip */ }
+  }
+  // 아이콘 점
+  if (!map.getLayer('landmark-dots')) {
+    try {
+      map.addLayer({
+        id: 'landmark-dots',
+        type: 'circle',
+        source: 'landmarks',
+        minzoom: 9,
+        paint: {
+          'circle-radius': ['interpolate', ['linear'], ['zoom'], 9, 3.5, 14, 5.5] as mapboxgl.Expression,
+          'circle-color': '#f59e0b',
+          'circle-stroke-color': '#08081a',
+          'circle-stroke-width': 1.5,
+          'circle-opacity': 0.92,
+        },
+      });
+    } catch { /* skip */ }
+  }
+  // 이름 레이블 (황금색)
+  if (!map.getLayer('landmark-labels')) {
+    try {
+      map.addLayer({
+        id: 'landmark-labels',
+        type: 'symbol',
+        source: 'landmarks',
+        minzoom: 9,
+        layout: {
+          'text-field': ['get', 'n'] as mapboxgl.Expression,
+          'text-size': ['interpolate', ['linear'], ['zoom'], 9, 9.5, 12, 11.5, 14, 13] as mapboxgl.Expression,
+          'text-offset': [0, 1.1] as [number, number],
+          'text-anchor': 'top',
+          'text-allow-overlap': false,
+          'text-ignore-placement': false,
+        },
+        paint: {
+          'text-color': '#fbbf24',
+          'text-halo-color': 'rgba(4,4,18,0.97)',
+          'text-halo-width': 2.2,
+        },
+      });
+    } catch { /* skip */ }
+  }
+}
+
 /** 레이블 정리: 동/구/시 지명만 + POI 숨김 */
 function setLabelStyle(map: mapboxgl.Map) {
   try {
@@ -884,11 +991,13 @@ export default function MapClient({ bars, onBarClick, selectedBarId }: Props) {
 
       setKorean(map);
       setTileColors(map);
+      setLandmarkStyle(map);
       setTransitStyle(map);
       setLabelStyle(map);
       map.on('style.load', () => {
         setKorean(map);
         setTileColors(map);
+        setLandmarkStyle(map);
         setTransitStyle(map);
         setLabelStyle(map);
       });
