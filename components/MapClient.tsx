@@ -837,50 +837,13 @@ const LANDMARK_CAT_COLOR: mapboxgl.Expression = [
   '#e2e8f0',             // default
 ];
 
-/** 주요 랜드마크 — Mapbox Maki 아이콘 (SDF) + 카테고리별 컬러 */
+/** 주요 랜드마크 — 원 없이 Maki 아이콘 + 카테고리 컬러 텍스트만 */
 function setLandmarkStyle(map: mapboxgl.Map) {
   if (!map.getSource('landmarks')) {
     map.addSource('landmarks', { type: 'geojson', data: LANDMARK_GEOJSON });
   }
 
-  // ① 후광 glow circle (카테고리 색)
-  if (!map.getLayer('landmark-glow')) {
-    try {
-      map.addLayer({
-        id: 'landmark-glow',
-        type: 'circle',
-        source: 'landmarks',
-        minzoom: 9,
-        paint: {
-          'circle-radius': ['interpolate', ['linear'], ['zoom'], 9, 14, 14, 26] as mapboxgl.Expression,
-          'circle-color': LANDMARK_CAT_COLOR,
-          'circle-opacity': 0.08,
-          'circle-blur': 1.5,
-        },
-      });
-    } catch { /* skip */ }
-  }
-
-  // ② 배경 원 (아이콘 뒤에 진한 원 — 가독성 향상)
-  if (!map.getLayer('landmark-bg')) {
-    try {
-      map.addLayer({
-        id: 'landmark-bg',
-        type: 'circle',
-        source: 'landmarks',
-        minzoom: 9,
-        paint: {
-          'circle-radius': ['interpolate', ['linear'], ['zoom'], 9, 9, 12, 12, 14, 15] as mapboxgl.Expression,
-          'circle-color': '#08081a',
-          'circle-stroke-color': LANDMARK_CAT_COLOR,
-          'circle-stroke-width': 1.8,
-          'circle-opacity': 0.85,
-        },
-      });
-    } catch { /* skip */ }
-  }
-
-  // ③ Mapbox Maki 아이콘 (SDF → icon-color 로 카테고리별 채색)
+  // Mapbox Maki 아이콘 (SDF) + 이름 레이블 — 원 없이 컬러로만 표현
   if (!map.getLayer('landmark-icons')) {
     try {
       map.addLayer({
@@ -890,26 +853,24 @@ function setLandmarkStyle(map: mapboxgl.Map) {
         minzoom: 9,
         layout: {
           'icon-image': ['get', 'icon'] as mapboxgl.Expression,
-          'icon-size': ['interpolate', ['linear'], ['zoom'], 9, 0.55, 12, 0.75, 14, 0.9] as mapboxgl.Expression,
+          'icon-size': ['interpolate', ['linear'], ['zoom'], 9, 0.65, 12, 0.9, 14, 1.1] as mapboxgl.Expression,
           'icon-allow-overlap': false,
           'icon-ignore-placement': false,
-          // 아이콘 아래 이름 레이블
           'text-field': ['get', 'n'] as mapboxgl.Expression,
-          'text-size': ['interpolate', ['linear'], ['zoom'], 9, 9, 12, 10.5, 14, 12.5] as mapboxgl.Expression,
-          'text-offset': [0, 1.5] as [number, number],
+          'text-size': ['interpolate', ['linear'], ['zoom'], 9, 9.5, 12, 11, 14, 13] as mapboxgl.Expression,
+          'text-offset': [0, 1.4] as [number, number],
           'text-anchor': 'top',
           'text-allow-overlap': false,
           'text-ignore-placement': false,
+          'text-font': ['Open Sans Semibold', 'Arial Unicode MS Bold'] as string[],
         },
         paint: {
-          // SDF 아이콘 채색 (카테고리별)
           'icon-color': LANDMARK_CAT_COLOR,
-          'icon-halo-color': 'rgba(4,4,18,0.8)',
-          'icon-halo-width': 1.5,
-          // 텍스트 (카테고리별)
+          'icon-halo-color': 'rgba(4,4,18,0.9)',
+          'icon-halo-width': 2,
           'text-color': LANDMARK_CAT_COLOR,
           'text-halo-color': 'rgba(4,4,18,0.97)',
-          'text-halo-width': 2.2,
+          'text-halo-width': 2.5,
         },
       });
     } catch { /* skip */ }
